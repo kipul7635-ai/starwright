@@ -22,8 +22,8 @@ export async function onRequestPost(context) {
     };
 
     return new Response(JSON.stringify(shipFile), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+  headers: { 'Content-Type': 'application/octet-stream' },
+});
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400, headers: { 'Content-Type': 'application/json' }
