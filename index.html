@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shipwright — Hull Assembly</title>
+<style>
+  :root{--bg:#05090f;--panel:#0b1420;--line:#1b2b3f;--line2:#2a4360;--txt:#b9d3e8;--dim:#5c7a96;--acc:#5ee3ff;--acc2:#8ef0c0;--warn:#ff9b5e}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:radial-gradient(circle at 70% 20%,#0d1a2b 0%,transparent 55%),radial-gradient(circle at 20% 85%,#0a1522 0%,transparent 55%),var(--bg);color:var(--txt);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow:hidden}
+  #app{display:flex;gap:14px;height:100vh;width:100%;padding:14px;max-width:1400px;margin:0 auto}
+  #panel{width:308px;flex:0 0 308px;height:100%;background:linear-gradient(180deg,#0c1624,#080f19);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-y:auto;overflow-x:hidden;box-shadow:0 0 40px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}
+  #panel::-webkit-scrollbar{width:8px}
+  #panel::-webkit-scrollbar-thumb{background:#16263a;border-radius:4px}
+  h1{font-size:16px;letter-spacing:.26em;margin:0;color:#dff3ff;font-weight:600}
+  .sub{font-size:9.5px;letter-spacing:.18em;color:var(--dim);margin-top:-7px}
+  .sect{font-size:9px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .sect::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+  .layers{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+  .layerbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:8px;cursor:pointer;background:#0e1a28;border:1px solid var(--line);color:var(--dim);font:inherit;font-size:7.5px;letter-spacing:0;transition:.15s}
+  .layerbtn span{font-size:14px;font-weight:700;color:#33506a;transition:.15s}
+  .layerbtn:hover{background:#132234;border-color:var(--line2)}
+  .layerbtn.active{background:#0f2c3a;border-color:var(--acc);color:#dff7ff;box-shadow:0 0 14px rgba(94,227,255,.18),inset 0 0 18px rgba(94,227,255,.06)}
+  .layerbtn.active span{color:var(--acc)}
+  .layerbtn.locked{opacity:.35}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .grid2 .card{margin-bottom:0}
+  .note{font-size:9.5px;line-height:1.55;color:var(--dim);border-left:2px solid var(--line2);padding:2px 0 2px 8px;margin-top:8px}
+  .note b{color:#9dc3e0;font-weight:600}
+
+  .card{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;margin-bottom:4px;background:#101c2c;border:1px solid var(--line);border-radius:7px;color:var(--txt);font:inherit;font-size:11px;cursor:pointer;transition:.15s;text-align:left}
+  .card:hover{background:#16273b;border-color:var(--line2)}
+  .card.active{background:#12303f;border-color:var(--acc);box-shadow:0 0 12px rgba(94,227,255,.14)}
+  .chip{width:13px;height:13px;flex:0 0 13px;border-radius:2px;background:var(--c);box-shadow:0 0 9px var(--c)}
+  .tico{width:22px;height:22px;flex:0 0 22px}
+  .tico polygon{fill:rgba(94,227,255,.28);stroke:#7fd6f2;stroke-width:.07;stroke-linejoin:miter}
+  .cardtxt{min-width:0}
+  .cardtxt b{display:block;font-size:11px;color:#dff0ff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cardtxt i{display:block;font-size:9px;color:var(--dim);font-style:normal;letter-spacing:.06em;white-space:nowrap}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .mini{padding:7px;border-radius:7px;cursor:pointer;font:inherit;font-size:10px;letter-spacing:.08em;background:#101c2c;border:1px solid var(--line);color:var(--txt);transition:.15s}
+  .mini:hover{background:#16273b;border-color:var(--line2)}
+  .mini:active{transform:translateY(1px)}
+  .mini:disabled{opacity:.35;cursor:not-allowed}
+  .mini.danger:hover:not(:disabled){background:#2b1420;border-color:#7a2a45;color:#ffb0c6}
+  .mini.on{background:#0f2c3a;border-color:var(--acc);color:#dff7ff;box-shadow:0 0 12px rgba(94,227,255,.2)}
+  .chk{display:flex;align-items:center;gap:7px;padding:7px 9px;background:#101c2c;border:1px solid var(--line);border-radius:7px;font-size:10px;letter-spacing:.08em;cursor:pointer;color:var(--txt);user-select:none}
+  .chk input{accent-color:var(--acc);cursor:pointer;margin:0}
+  .chk:hover{background:#16273b}
+  .chk.on{background:#2b1420;border-color:#a8405f;color:#ffc2d2}
+  .paintrow{display:grid;grid-template-columns:1fr;gap:5px}
+  .chk input[type=color]{width:20px;height:20px;padding:0;border:1px solid var(--line2);border-radius:4px;background:none;cursor:pointer}
+  .nameInput{width:100%;padding:8px 10px;background:#101c2c;border:1px solid var(--line);border-radius:7px;color:#dff0ff;font:inherit;font-size:11px;letter-spacing:.06em;outline:none;transition:.15s}
+  .nameInput:hover{border-color:var(--line2)}
+  .nameInput:focus{border-color:var(--acc);box-shadow:0 0 12px rgba(94,227,255,.18)}
+
+  .stats{display:flex;flex-direction:column;gap:4px;margin-top:auto}
+  .stat{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.1em;color:var(--dim);padding:5px 9px;background:#0a1420;border:1px solid var(--line);border-radius:6px}
+  .stat b{color:var(--acc);font-size:11px;letter-spacing:.05em}
+  .stat b.full{color:var(--warn)}
+
+  #stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;position:relative}
+  #wrap{width:min(750px,100%,calc((100vh - 60px) * 25 / 17));aspect-ratio:25/17;position:relative;border-radius:12px;box-shadow:0 0 0 1px var(--line),0 0 60px rgba(94,227,255,.06),0 20px 60px rgba(0,0,0,.7);overflow:hidden}
+  #c{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+  #zoomTag{position:absolute;right:10px;top:8px;font-size:10px;letter-spacing:.1em;color:var(--dim);pointer-events:none}
+  #toast{position:absolute;left:50%;bottom:16px;transform:translate(-50%,14px);background:rgba(10,22,34,.96);border:1px solid var(--warn);color:#ffd7c0;font-size:10.5px;letter-spacing:.1em;padding:8px 16px;border-radius:20px;pointer-events:none;opacity:0;transition:.22s;white-space:nowrap;box-shadow:0 0 24px rgba(255,155,94,.18)}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (max-width:900px){#app{flex-direction:column-reverse;padding:8px;gap:8px}#panel{width:100%;flex:0 0 auto;height:auto;max-height:46vh}}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <div>
+      <h1>SHIPWRIGHT</h1>
+      <div class="sub">HULL ASSEMBLY · v1.1</div>
+    </div>
+
+    <div>
+      <div class="sect">Ship Name</div>
+      <input id="shipName" class="nameInput" value="Untitled Ship" maxlength="48" spellcheck="false" autocomplete="off">
+    </div>
+
+    <div>
+      <div class="sect">Ship File</div>
+      <div class="opts">
+        <button class="mini" id="exportBtn">EXPORT .ship</button>
+        <button class="mini" id="importBtn">IMPORT .ship</button>
+      </div>
+      <input type="file" id="importFile" accept=".ship,.json,application/json" style="display:none">
+      <div class="note">A <b>.ship</b> file keeps the whole build — both floors, tiles, weapons, energy, modules, engines, utilities, paint overlays and colors. Files are signed on the server; hand-edited data will be rejected.</div>
+    </div>
+
+    <div>
+      <div class="sect">Floors</div>
+      <div id="floors"></div>
+      <div class="note">Floor 2 is an armor-only underlay, drawn <b>beneath</b> the main floor.</div>
+    </div>
+
+    <div>
+      <div class="sect">Build Layer</div>
+      <div class="layers">
+        <button class="layerbtn active" data-layer="0"><span>1</span>ARMOR</button>
+        <button class="layerbtn" data-layer="1"><span>2</span>ENERGY</button>
+        <button class="layerbtn" data-layer="2"><span>3</span>WEAPONS</button>
+        <button class="layerbtn" data-layer="3"><span>4</span>MODULES</button>
+        <button class="layerbtn" data-layer="4"><span>5</span>UTILITY</button>
+        <button class="layerbtn" data-layer="5"><span>6</span>PAINT</button>
+      </div>
+    </div>
+
+    <div id="paintPanel" style="display:none">
+      <div class="sect">Final Colors</div>
+      <div class="paintrow">
+        <label class="chk"><input type="color" id="colBody" value="#3a5873">BODY</label>
+        <label class="chk"><input type="color" id="colBody2" value="#2a4358">UNDERLAY</label>
+        <label class="chk"><input type="color" id="colOutline" value="#9fd2f2">OUTLINE</label>
+        <label class="chk"><input type="color" id="colWeapon" value="#5ee3ff">WEAPONS</label>
+        <label class="chk"><input type="color" id="colGlass" value="#8fd7ff">CABIN GLASS</label>
+        <label class="chk"><input type="color" id="colEdge" value="#c9e6ff">CABIN EDGE</label>
+      </div>
+      <div class="sect" style="margin-top:10px">Paint Overlay</div>
+      <div class="paintrow">
+        <label class="chk"><input type="color" id="colOverlay" value="#ff9b5e">OVERLAY</label>
+        <div class="opts" style="grid-template-columns:repeat(3,1fr)">
+          <button class="mini" id="ovPaintBtn">PAINT</button>
+          <button class="mini" id="ovEraseBtn">ERASE</button>
+          <button class="mini danger" id="ovClearBtn">CLEAR</button>
+        </div>
+      </div>
+      <div class="note">Overlay paints custom colors onto the hull of the <b>active floor</b>. Click or drag on hull cells. Cabin colors apply to every cabin block.</div>
+    </div>
+
+    <div>
+      <div class="sect" id="toolTitle">Armor Tiles</div>
+      <div id="tools"></div>
+    </div>
+
+    <div>
+      <div class="sect">Controls</div>
+      <div class="opts">
+        <label class="chk"><input type="checkbox" id="mirror"> MIRROR X</label>
+        <button class="mini" id="rotBtn">ROTATE ⟳</button>
+        <button class="mini" id="flipBtn">FLIP ⇋</button>
+        <button class="mini" id="undoBtn">UNDO</button>
+        <button class="mini danger" id="clearBtn">CLEAR LAYER</button>
+        <label class="chk" id="rmLbl"><input type="checkbox" id="rmMode"> REMOVE MODE</label>
+        <label class="chk"><input type="checkbox" id="panMode"> PAN MODE</label>
+        <button class="mini" id="viewBtn">RESET VIEW</button>
+      </div>
+      <div class="note"><b>Remove mode</b> (X) makes clicks delete tiles / reactors &amp; cells / weapon slots / modules on the current layer. Right-click also removes. <b>View:</b> scroll or pinch to zoom, two fingers / middle-drag / Space+drag to pan.</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span>TILES (ALL FLOORS)</span><b id="statArmor">0</b></div>
+      <div class="stat"><span>ENERGY REGEN</span><b id="statRegen">0/s</b></div>
+      <div class="stat"><span>MAX ENERGY</span><b id="statCap">0</b></div>
+      <div class="stat"><span>WEAPON SLOTS</span><b id="statWeap">0 / 8</b></div>
+      <div class="stat"><span>MODULES</span><b id="statMod">0 / 4</b></div>
+      <div class="stat"><span>ENGINE THRUST</span><b id="statThrust">0</b></div>
+    </div>
+  </aside>
+
+  <main id="stage">
+    <div id="wrap">
+      <canvas id="c"></canvas>
+      <div id="zoomTag">100%</div>
+      <div id="toast"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   GEOMETRY — every floor has its own odd-width grid + tile size.
+   CS / W / H / tiles / cellStates describe the CURRENT floor.
+   Weapons, energy and modules exist on floor 1 only.
+   ========================================================= */
+const CW = 750, CH = 510;
+let CS = 30, W = 25, H = 17;
+let PW = W*CS, PH = H*CS;
+const FLOOR_COLORS = ['#5ee3ff','#ffb35e'];
+
+/* armor tile shapes: base box w×h (cells) + polygon in cell units */
+const TILES = {
+  square:   {name:'Square',        w:1,h:1,p:[[0,0],[1,0],[1,1],[0,1]]},
+  wedge:    {name:'Wedge',         w:1,h:1,p:[[0,0],[1,0],[0,1]]},
+  cone:     {name:'Small Cone',    w:1,h:1,p:[[0,0],[1,0],[.5,.5]]},
+  halfwedge:{name:'Half Wedge',    w:1,h:1,p:[[0,0],[1,0],[0,.5]]},
+  quarter:  {name:'Quarter Wedge', w:1,h:1,p:[[0,0],[1,0],[0,.25]]},
+  chamfer:  {name:'Cut Square',    w:1,h:1,p:[[0,0],[1,0],[1,.5],[.5,1],[0,1]]},
+  half:     {name:'Half Plate',    w:1,h:1,p:[[0,0],[1,0],[1,.5],[0,.5]]},
+  nose:     {name:'Nose Triangle', w:2,h:1,p:[[0,1],[1,0],[2,1]]},
+  long:     {name:'Long Wedge',    w:2,h:1,p:[[0,0],[2,1],[0,1]]},
+  big:      {name:'Big Wedge',     w:2,h:2,p:[[0,0],[2,0],[0,2]]},
+};
+
+const WEAPONS = [
+  {id:'pulse',    name:'Pulse Turret',    cat:'SMALL',  w:1, h:1, color:'#5ee3ff'},
+  {id:'pd',       name:'Point Defense',   cat:'SMALL',  w:1, h:1, color:'#8ef0c0'},
+  {id:'flak',     name:'Flak Array',      cat:'SMALL',  w:1, h:1, color:'#ffd479'},
+  {id:'cannon',   name:'Heavy Cannon',    cat:'LARGE',  w:2, h:2, color:'#ff9b5e'},
+  {id:'missile',  name:'Missile Rack',    cat:'LARGE',  w:2, h:2, color:'#ff7ba8'},
+  {id:'railgun',  name:'Spinal Railgun',  cat:'BRIDGE', w:4, h:2, color:'#c08bff', a0:1},
+  {id:'broadside',name:'Broadside Array', cat:'BRIDGE', w:4, h:2, color:'#7ba8ff'},
+];
+const MODULES = [
+  {id:'shield', name:'Shield Generator', color:'#5ee3ff'},
+  {id:'repair', name:'Repair Bay',       color:'#8ef0c0'},
+  {id:'sensor', name:'Sensor Array',     color:'#ffd479'},
+  {id:'drive',  name:'Overdrive Core',   color:'#ff7ba8'},
+];
+/* energy: 4 tiers each, tier N = N×N footprint. reactor regen 2·N²/s, cell capacity 20·N² */
+const ROMAN = ['I','II','III','IV'];
+const ENERGY = [];
+for(const kind of ['reactor','cell'])
+  for(let t = 1; t <= 4; t++)
+    ENERGY.push({
+      id: kind + t, kind, tier: t, size: t,
+      name: (kind === 'reactor' ? 'Reactor ' : 'Cell ') + ROMAN[t-1],
+      color: kind === 'reactor' ? '#ffb35e' : '#7bf0b0',
+      stat: kind === 'reactor' ? 2*t*t : 20*t*t
+    });
+const EN_BY_ID = Object.fromEntries(ENERGY.map(e => [e.id, e]));
+
+const MAX_WEAPONS = 8, MAX_MODULES = 4, MODULE_SIZE = 3;
+const ENGINE_COLOR = '#ff7a4d';
+const EXH_MSG = '⚠ Engine exhaust path — nothing may sit behind an engine';
+
+/* =========================================================
+   PAINT — final-form palette (tunable colors + overlay)
+   ========================================================= */
+const PAINT = {
+  body:'#3a5873', body2:'#2a4358',
+  outline:'#9fd2f2', weapons:'#5ee3ff',
+  glass:'#8fd7ff', edge:'#c9e6ff', overlay:'#ff9b5e'
+};
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+}
+function shade(hex, f, a){
+  const {r,g,b} = hexToRgb(hex);
+  const R = Math.max(0, Math.min(255, Math.round(r*f)));
+  const G = Math.max(0, Math.min(255, Math.round(g*f)));
+  const B = Math.max(0, Math.min(255, Math.round(b*f)));
+  return a === undefined ? `rgb(${R},${G},${B})` : `rgba(${R},${G},${B},${a})`;
+}
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let tiles = [];            // {kind,rot,flip,c,r,w,h,p}
+let cellStates = new Array(W*H).fill(null);
+let cellsDirty = true;
+let weapons = [], energy = [], modules = [], engines = [], utilities = [];
+let selUtility = 'engine';
+const UTILITIES = [
+  {id:'comm',    name:'Communication Array', w:2, h:1, color:'#7ba8ff'},
+  {id:'drone',   name:'Drone Bay',           w:3, h:2, color:'#ffb35e'},
+  {id:'scanner', name:'Directional Scanner', w:1, h:1, color:'#8ef0c0'},
+  {id:'cabin_s', name:'Small Cabin',         w:1, h:2, color:'#c9e6ff', cabin:true},
+  {id:'cabin_m', name:'Medium Cabin',        w:3, h:4, color:'#c9e6ff', cabin:true},
+  {id:'cabin_l', name:'Big Cabin',           w:5, h:7, color:'#c9e6ff', cabin:true}
+];
+let uid = 1;
+
+let floors = [], cur = 0, fdim = 1;
+
+let layer = 0;             // 0 armor | 1 energy | 2 weapons | 3 modules | 4 utility | 5 paint
+let overlayMode = 'off';   // 'off' | 'paint' | 'erase' (paint layer only)
+function isPaint(){ return layer === 5; }
+let selTile = 'square', selEnergy = 'reactor1', selWeapon = 'pulse', selModule = 'shield';
+let rot = 0, flipT = false, mirror = false, removeMode = false;
+
+let drawing = false, drawingErase = false, lastCell = null;
+let hover = {c:-1, r:-1};
+let strokeUndoPushed = false;
+const undoStack = [];
+const cam = {x: CW/2, y: CH/2, z: 1};
+
+/* ---------- floors ---------- */
+function mkFloor(i){
+  const w = 25 + 2*i, h = 17 + 2*i;
+  return { W:w, H:h, CS: Math.round(30*Math.pow(1.15,i)*10)/10,
+           tiles:[], cells:new Array(w*h).fill(null), dirty:true, overlay:{} };
+}
+function sync(){
+  const f = floors[cur]; if(!f) return;
+  f.tiles = tiles; f.cells = cellStates; f.dirty = cellsDirty;
+}
+function load(i){
+  cur = i;
+  const f = floors[i];
+  tiles = f.tiles; cellStates = f.cells; cellsDirty = f.dirty;
+  W = f.W; H = f.H; CS = f.CS; PW = W*CS; PH = H*CS;
+}
+function setFloor(i){ sync(); load(i); hover.c = hover.r = -1; }
+function fitView(){
+  let mw = 0, mh = 0;
+  for(const f of floors){ mw = Math.max(mw, f.W*f.CS); mh = Math.max(mh, f.H*f.CS); }
+  cam.z = Math.max(0.3, Math.min(1, Math.min(CW/mw, CH/mh)*0.95));
+  cam.x = CW/2; cam.y = CH/2;
+}
+
+/* ---------- tile geometry ---------- */
+function basePoly(kind, rt, fl){
+  const d = TILES[kind];
+  let p = d.p.map(a => a.slice()), w = d.w, h = d.h;
+  if(fl) p = p.map(([x,y]) => [w - x, y]);
+  for(let i = 0; i < rt; i++){
+    p = p.map(([x,y]) => [h - y, x]);
+    const t = w; w = h; h = t;
+  }
+  return {p, w, h};
+}
+
+/* =========================================================
+   CELL OCCUPANCY
+   ========================================================= */
+function markDirty(){ cellsDirty = true; }
+function ensureCells(){
+  if(!cellsDirty) return;
+  cellStates.fill(null);
+  for(const t of tiles)
+    for(let j = 0; j < t.h; j++)
+      for(let i = 0; i < t.w; i++) cellStates[(t.r+j)*W + t.c+i] = t;
+  cellsDirty = false;
+}
+function inBounds(c, r){ return c >= 0 && r >= 0 && c < W && r < H; }
+function cellFull(c, r){
+  if(!inBounds(c, r)) return false;
+  const t = cellStates[r*W + c];
+  return !!t && t.kind === 'square';
+}
+function allFull(c, r, w, h){
+  for(let j = 0; j < h; j++) for(let i = 0; i < w; i++) if(!cellFull(c+i, r+j)) return false;
+  return true;
+}
+/* drop weapons / energy / modules whose plating is no longer solid squares */
+function prune(){
+  if(cur !== 0) return;
+  ensureCells();
+  weapons = weapons.filter(x => allFull(x.c, x.r, x.w, x.h));
+  energy  = energy.filter(x => allFull(x.c, x.r, x.s, x.s));
+  modules = modules.filter(x => allFull(x.c, x.r, MODULE_SIZE, MODULE_SIZE));
+  engines = engines.filter(x => cellFull(x.c, x.r));
+  utilities = utilities.filter(x => { const d=UTILITIES.find(u=>u.id===x.kind); const w=(x.rot||0)%2?d.h:d.w, h=(x.rot||0)%2?d.w:d.h; return x.kind==='scanner' ? !!(inBounds(x.c,x.r) && cellStates[x.r*W+x.c]) : allFull(x.c,x.r,w,h); });
+}
+
+/* =========================================================
+   ITEM LOOKUP / VALIDATION  (floor 1 only)
+   ========================================================= */
+function weaponSize(id){
+  const d = WEAPONS.find(w => w.id === id);
+  let w = d.w, h = d.h;
+  if(rot % 2 === 1){ const t = w; w = h; h = t; }
+  return {w, h};
+}
+function anchorFor(w, h, c, r){ return { c: c - Math.floor(w/2), r: r - Math.floor(h/2) }; }
+
+function hit(list, c, r, sz){
+  for(const x of list){
+    const w = sz ? sz(x) : x.w, h = sz ? sz(x) : x.h;
+    if(c >= x.c && c < x.c + w && r >= x.r && r < x.r + h) return x;
+  }
+  return null;
+}
+function weaponAt(c, r){ return cur === 0 ? hit(weapons, c, r) : null; }
+function energyAt(c, r){ return cur === 0 ? hit(energy, c, r, x => x.s) : null; }
+function moduleAt(c, r){ return cur === 0 ? hit(modules, c, r, () => MODULE_SIZE) : null; }
+function utilitySize(x){ const d = UTILITIES.find(u => u.id === x.kind); const w=d.w, h=d.h; return (x.rot||0)%2 ? h : w; }
+function utilityAt(c, r){
+  if(cur !== 0) return null;
+  for(const x of utilities){ const d=UTILITIES.find(u=>u.id===x.kind); const w=(x.rot||0)%2?d.h:d.w, h=(x.rot||0)%2?d.w:d.h;
+    if(c>=x.c && c<x.c+w && r>=x.r && r<x.r+h) return x;
+  }
+  return null;
+}
+function engineAt(c, r){ return cur === 0 ? hit(engines, c, r, () => 1) : null; }
+function itemAt(c, r){ return weaponAt(c,r) || energyAt(c,r) || moduleAt(c,r) || utilityAt(c,r) || engineAt(c,r); }
+
+function canPlaceBlock(c, r, w, h, ign){
+  if(cur !== 0) return false;
+  ensureCells();
+  if(c < 0 || r < 0 || c + w > W || r + h > H) return false;
+  for(let j = 0; j < h; j++)
+    for(let i = 0; i < w; i++){
+      if(!cellFull(c+i, r+j)) return false;
+      if(itemAt(c+i, r+j)) return false;
+      if(!ign && inExhaust(c+i, r+j)) return false;
+    }
+  return true;
+}
+const canPlaceWeapon = (id, c, r) => { const s = weaponSize(id); return canPlaceBlock(c, r, s.w, s.h); };
+const canPlaceEnergy = (id, c, r) => canPlaceBlock(c, r, EN_BY_ID[id].size, EN_BY_ID[id].size);
+const canPlaceModule = (id, c, r) => canPlaceBlock(c, r, MODULE_SIZE, MODULE_SIZE);
+
+/* =========================================================
+   UNDO
+   ========================================================= */
+function snapshot(){
+  sync();
+  return JSON.stringify({
+    wp: weapons, en: energy, md: modules, eg: engines, ut: utilities,
+    f: floors.map(f => ({W:f.W, H:f.H, CS:f.CS, t:f.tiles, ov:f.overlay}))
+  });
+}
+function pushUndo(){ undoStack.push(snapshot()); if(undoStack.length > 80) undoStack.shift(); }
+function pushUndoOnce(){ if(!strokeUndoPushed){ pushUndo(); strokeUndoPushed = true; } }
+function restore(s){
+  const d = JSON.parse(s);
+  floors = d.f.map(x => ({W:x.W, H:x.H, CS:x.CS, tiles:x.t,
+    cells:new Array(x.W*x.H).fill(null), dirty:true, overlay:x.ov || {}}));
+  weapons = d.wp; energy = d.en; modules = d.md; engines = d.eg || []; utilities = d.ut || [];
+  load(Math.min(cur, floors.length - 1));
+}
+function doUndo(){
+  const s = undoStack.pop();
+  if(!s){ toast('Nothing to undo'); return; }
+  restore(s);
+  updateStats(); buildFloors();
+  if(isPaint() && !hasCabin()){ setLayer(0); toast('Paint mode needs a cabin'); return; }
+  buildTools(); render();
+}
+
+/* =========================================================
+   CANVAS
+   ========================================================= */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width = CW*dpr; canvas.height = CH*dpr;
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function drawBackdrop(){
+  const g = ctx.createRadialGradient(CW/2, CH/2, 30, CW/2, CH/2, CW*0.8);
+  g.addColorStop(0, '#0e1726'); g.addColorStop(1, '#05090f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+}
+
+function drawGrid(){
+  ctx.strokeStyle = layer === 0 ? 'rgba(80,130,175,0.15)' : 'rgba(80,130,175,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let c = 1; c < W; c++){ ctx.moveTo(c*CS, 0); ctx.lineTo(c*CS, PH); }
+  for(let r = 1; r < H; r++){ ctx.moveTo(0, r*CS); ctx.lineTo(PW, r*CS); }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(80,130,175,0.3)';
+  ctx.strokeRect(0, 0, PW, PH);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(94,227,255,0.20)';
+  ctx.setLineDash([5,7]);
+  ctx.beginPath(); ctx.moveTo(PW/2, 0); ctx.lineTo(PW/2, PH); ctx.stroke();
+  ctx.restore();
+}
+
+/* split an edge into 0.25-unit pieces so shared edges of any tile shapes cancel */
+function pk(x, y){ return Math.round(x*1000) + ',' + Math.round(y*1000); }
+function addSegs(map, a, b){
+  const n = Math.max(1, Math.round(Math.hypot(b[0]-a[0], b[1]-a[1]) * 4));
+  for(let i = 0; i < n; i++){
+    const x1 = a[0] + (b[0]-a[0])*i/n,     y1 = a[1] + (b[1]-a[1])*i/n;
+    const x2 = a[0] + (b[0]-a[0])*(i+1)/n, y2 = a[1] + (b[1]-a[1])*(i+1)/n;
+    let k1 = pk(x1,y1), k2 = pk(x2,y2);
+    const key = k1 < k2 ? k1 + '|' + k2 : k2 + '|' + k1;
+    const rec = map.get(key);
+    if(rec) rec.n++; else map.set(key, {n:1, x1, y1, x2, y2});
+  }
+}
+
+function drawArmor(){
+  ensureCells();
+  ctx.save();
+  ctx.globalAlpha = (layer === 0 ? 1 : 0.55) * fdim;
+
+  const fill = new Path2D(), seg = new Map();
+  const disconnected = new Set();
+  if(cur !== 1 && tiles.length > 1){
+    const adj = tiles.map(() => new Set());
+    for(let i=0;i<tiles.length;i++) for(let j=i+1;j<tiles.length;j++){
+      const a=tiles[i], b=tiles[j];
+      const overlapX = Math.min(a.c+a.w,b.c+b.w)-Math.max(a.c,b.c);
+      const overlapY = Math.min(a.r+a.h,b.r+b.h)-Math.max(a.r,b.r);
+      const touches = (Math.abs(a.c+a.w-b.c)<1e-6 || Math.abs(b.c+b.w-a.c)<1e-6) && overlapY>0 ||
+                      (Math.abs(a.r+a.h-b.r)<1e-6 || Math.abs(b.r+b.h-a.r)<1e-6) && overlapX>0;
+      if(touches){adj[i].add(j);adj[j].add(i);}
+    }
+    const groups=[], seen=new Set();
+    for(let i=0;i<tiles.length;i++) if(!seen.has(i)){
+      const group=[], stack=[i]; seen.add(i);
+      while(stack.length){const n=stack.pop();group.push(n);for(const v of adj[n])if(!seen.has(v)){seen.add(v);stack.push(v);}}
+      groups.push(group);
+    }
+    groups.sort((a,b)=>b.length-a.length);
+    for(const group of groups.slice(1)) for(const i of group) disconnected.add(tiles[i]);
+  }
+
+  for(const t of tiles){
+    const p = t.p.map(([x,y]) => [x + t.c, y + t.r]);
+    fill.moveTo(p[0][0]*CS, p[0][1]*CS);
+    for(let i = 1; i < p.length; i++) fill.lineTo(p[i][0]*CS, p[i][1]*CS);
+    fill.closePath();
+    for(let i = 0; i < p.length; i++) addSegs(seg, p[i], p[(i+1) % p.length]);
+  }
+
+  const g = ctx.createLinearGradient(0, 0, 0, PH);
+  g.addColorStop(0, '#54789c'); g.addColorStop(0.45, '#3a5873'); g.addColorStop(1, '#1d2e40');
+  ctx.fillStyle = g;
+  ctx.fill(fill);
+  for(const t of disconnected){
+    const p=t.p.map(([x,y])=>[(x+t.c)*CS,(y+t.r)*CS]);
+    ctx.beginPath();p.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
+    ctx.fillStyle='rgba(255,65,82,0.68)';ctx.fill();
+    ctx.strokeStyle='#ff5268';ctx.lineWidth=2;ctx.stroke();
+  }
+
+  ctx.lineJoin = 'miter';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(159,210,242,0.22)';
+  ctx.stroke(fill);
+
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#9fd2f2';
+  ctx.shadowColor = 'rgba(94,227,255,0.40)';
+  ctx.shadowBlur = 7;
+  ctx.beginPath();
+  for(const s of seg.values()) if(s.n === 1){ ctx.moveTo(s.x1*CS, s.y1*CS); ctx.lineTo(s.x2*CS, s.y2*CS); }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- paint hull: per-floor body color, stepped radial shading + overlay ---------- */
+function drawArmorPaint(){
+  ensureCells();
+  ctx.save();
+  ctx.globalAlpha = fdim;
+
+  const bodyCol = cur === 1 ? PAINT.body2 : PAINT.body;
+  const cx = W/2, cy = H/2;
+  const maxD = Math.hypot(cx, cy) || 1;
+  const STEPS = 5, DARK = 0.05;
+  const seg = new Map();
+  const hullPath = new Path2D();
+
+  const shadeF = (tc, tr) => {
+    const d = Math.min(1, Math.hypot(tc - cx, tr - cy)/maxD);
+    const lvl = Math.min(STEPS - 1, Math.floor((1 - d)*STEPS + 1e-6));
+    return 1 - lvl*DARK;
+  };
+
+  for(const t of tiles){
+    const p = t.p.map(([x,y]) => [x + t.c, y + t.r]);
+    const f = shadeF(t.c + t.w/2, t.r + t.h/2);
+
+    ctx.beginPath();
+    p.forEach(([x,y], i) => i ? ctx.lineTo(x*CS, y*CS) : ctx.moveTo(x*CS, y*CS));
+    ctx.closePath();
+    ctx.fillStyle = shade(bodyCol, f);
+    ctx.fill();
+    ctx.strokeStyle = shade(bodyCol, f*0.72, 0.55);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    hullPath.moveTo(p[0][0]*CS, p[0][1]*CS);
+    for(let i=1;i<p.length;i++) hullPath.lineTo(p[i][0]*CS, p[i][1]*CS);
+    hullPath.closePath();
+
+    for(let i = 0; i < p.length; i++) addSegs(seg, p[i], p[(i+1) % p.length]);
+  }
+
+  const ov = (floors[cur] && floors[cur].overlay) || {};
+  const okeys = Object.keys(ov);
+  if(okeys.length){
+    const ovPath = new Path2D();
+
+    ctx.save();
+    ctx.clip(hullPath);
+    for(const k of okeys){
+      const [c, r] = k.split(',').map(Number);
+      if(!inBounds(c, r) || !cellStates[r*W + c]) continue;
+      const f = shadeF(c + 0.5, r + 0.5);
+      ctx.fillStyle = shade(ov[k], f);
+      ctx.fillRect(c*CS, r*CS, CS, CS);
+      ovPath.rect(c*CS, r*CS, CS, CS);
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.clip(ovPath);
+    for(const t of tiles){
+      const p = t.p.map(([x,y]) => [x + t.c, y + t.r]);
+      const f = shadeF(t.c + t.w/2, t.r + t.h/2);
+      ctx.beginPath();
+      p.forEach(([x,y], i) => i ? ctx.lineTo(x*CS, y*CS) : ctx.moveTo(x*CS, y*CS));
+      ctx.closePath();
+      ctx.strokeStyle = shade(bodyCol, f*0.72, 0.55);
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.lineJoin = 'miter';
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = PAINT.outline;
+  ctx.shadowColor = PAINT.outline;
+  ctx.shadowBlur = 5;
+  ctx.beginPath();
+  for(const s of seg.values()) if(s.n === 1){ ctx.moveTo(s.x1*CS, s.y1*CS); ctx.lineTo(s.x2*CS, s.y2*CS); }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawEnergyItem(e){
+  const def = EN_BY_ID[e.id];
+  const s = e.s*CS, x = e.c*CS, y = e.r*CS, cx = x + s/2, cy = y + s/2;
+
+  ctx.beginPath(); ctx.rect(x+2.5, y+2.5, s-5, s-5);
+  ctx.fillStyle = 'rgba(8,18,30,0.88)'; ctx.fill();
+  ctx.save();
+  ctx.shadowColor = def.color; ctx.shadowBlur = 9;
+  ctx.strokeStyle = def.color; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = ctx.fillStyle = def.color;
+  ctx.lineWidth = 1.4;
+  const prev = ctx.globalAlpha;
+
+  if(def.kind === 'reactor'){
+    const R = s*0.26;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = prev*0.55;
+    ctx.beginPath(); ctx.arc(cx, cy, R*0.5, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = prev*0.9;
+    const outer = Math.min(R*1.55, s/2 - 5);
+    ctx.beginPath();
+    for(let i = 0; i < 8; i++){
+      const a = i*Math.PI/4;
+      ctx.moveTo(cx + Math.cos(a)*R*1.15, cy + Math.sin(a)*R*1.15);
+      ctx.lineTo(cx + Math.cos(a)*outer,  cy + Math.sin(a)*outer);
+    }
+    ctx.stroke();
+    for(let t = 2; t <= def.tier; t++){
+      ctx.globalAlpha = prev*0.35;
+      ctx.beginPath(); ctx.arc(cx, cy, R*(0.5 + t*0.22), 0, Math.PI*2); ctx.stroke();
+    }
+  } else {
+    const bw = s*0.5, bh = s*0.58, x0 = cx - bw/2, y0 = cy - bh/2 + s*0.03;
+    ctx.strokeRect(x0, y0, bw, bh);
+    ctx.fillRect(cx - s*0.08, y0 - s*0.06, s*0.16, s*0.06);
+    const n = def.tier + 1;
+    ctx.globalAlpha = prev*0.6;
+    for(let k = 0; k < n; k++){
+      const bh2 = bh/n;
+      ctx.fillRect(x0 + 2.5, y0 + bh - (k+1)*bh2 + 2, bw - 5, bh2 - 4);
+    }
+  }
+  ctx.globalAlpha = prev;
+}
+
+/* ---------- engine exhaust ---------- */
+function engineBlocker(c, r){
+  ensureCells();
+  for(let rr = r + 1; rr < H; rr++){
+    if(engineAt(c, rr)) continue;
+    if(cellStates[rr*W + c] || itemAt(c, rr)) return {c, r:rr};
+  }
+  return null;
+}
+function inExhaust(c, r){
+  if(cur !== 0 || engineAt(c, r)) return false;
+  if(engines.some(e => e.c === c && e.r < r)) return true;
+  for(const u of utilities){ if(u.kind !== 'drone') continue; const d=(u.rot||0)%4;
+    const w=d%2?2:3, h=d%2?3:2;
+    let x, y, dc=0, dr=0;
+    if(d===0){ x=u.c+Math.floor(w/2); y=u.r+h; dr=1; }
+    else if(d===1){ x=u.c-1; y=u.r+Math.floor(h/2); dc=-1; }
+    else if(d===2){ x=u.c+Math.floor(w/2); y=u.r-1; dr=-1; }
+    else { x=u.c+w; y=u.r+Math.floor(h/2); dc=1; }
+    for(let k=0;k<Math.max(W,H);k++){ const xx=x+dc*k, yy=y+dr*k; if(!inBounds(xx,yy)) break; if(xx===c && yy===r) return true; }
+  }
+  return false;
+}
+function exhaustBlocked(c, r, w, h){
+  if(cur !== 0) return false;
+  for(let j = 0; j < h; j++) for(let i = 0; i < w; i++) if(inExhaust(c+i, r+j)) return true;
+  return false;
+}
+
+/* ---------- weapons ---------- */
+function wFrame(w, fn){
+  const def = WEAPONS.find(d => d.id === w.kind);
+  ctx.save();
+  ctx.translate((w.c + w.w/2)*CS, (w.r + w.h/2)*CS);
+  ctx.rotate((w.rot || 0)*Math.PI/2);
+  fn(def, def.w*CS, def.h*CS, CS);
+  ctx.restore();
+}
+function metalBar(x, y, wd, ht, col){
+  ctx.fillStyle = 'rgb(12,24,38)'; ctx.fillRect(x, y, wd, ht);
+  ctx.save();
+  ctx.globalAlpha *= 0.35; ctx.fillStyle = col;
+  if(ht >= wd) ctx.fillRect(x + wd*0.38, y, wd*0.24, ht); else ctx.fillRect(x, y + ht*0.38, wd, ht*0.24);
+  ctx.restore();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.strokeRect(x, y, wd, ht);
+}
+
+function drawWeapon(w){
+  wFrame(w, (d, bw, bh, s) => {
+    const col = isPaint() ? PAINT.weapons : d.color, c = s*0.14;
+    const x = -bw/2 + 2.5, y = -bh/2 + 2.5, ww = bw - 5, hh = bh - 5;
+    ctx.beginPath();
+    ctx.moveTo(x+c, y); ctx.lineTo(x+ww-c, y); ctx.lineTo(x+ww, y+c); ctx.lineTo(x+ww, y+hh-c);
+    ctx.lineTo(x+ww-c, y+hh); ctx.lineTo(x+c, y+hh); ctx.lineTo(x, y+hh-c); ctx.lineTo(x, y+c);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(8,18,30,0.94)'; ctx.fill();
+    ctx.save(); ctx.globalAlpha *= 0.14; ctx.fillStyle = col; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 9; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
+    ctx.save();
+    ctx.globalAlpha *= 0.3; ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.strokeRect(x+4, y+4, ww-8, hh-8);
+    ctx.globalAlpha *= 2; ctx.fillStyle = col;
+    for(const [bx, by] of [[x+7,y+7],[x+ww-7,y+7],[x+7,y+hh-7],[x+ww-7,y+hh-7]]){
+      ctx.beginPath(); ctx.arc(bx, by, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = col; ctx.globalAlpha *= .42; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x+ww*.18, y+hh*.22); ctx.lineTo(x+ww*.82, y+hh*.22);
+    ctx.moveTo(x+ww*.18, y+hh*.78); ctx.lineTo(x+ww*.82, y+hh*.78);
+    ctx.stroke();
+    ctx.fillStyle = '#8aa8bf';
+    for(const [bx,by] of [[x+ww*.12,y+hh*.12],[x+ww*.88,y+hh*.12],[x+ww*.12,y+hh*.88],[x+ww*.88,y+hh*.88]]){
+      ctx.beginPath(); ctx.arc(bx,by,Math.max(1.2,s*.045),0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
+    const ring = (cx, cy, r, fillDark) => {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+      if(fillDark){ ctx.save(); ctx.fillStyle = 'rgb(8,18,30)'; ctx.fill(); ctx.restore(); }
+      ctx.stroke();
+    };
+    const dot = (cx, cy, r, a) => { ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); ctx.restore(); };
+
+    switch(d.id){
+      case 'pulse':
+        ring(0, 0, s*0.3, true); ring(0, 0, s*0.16, false); dot(0, 0, s*0.07, 0.9); break;
+      case 'pd':
+        ring(0, 0, s*0.34, true); dot(0, 0, s*0.34, 0.16); ring(0, 0, s*0.18, false);
+        dot(-s*0.27, s*0.27, s*0.05, 0.9); dot(s*0.27, s*0.27, s*0.05, 0.9); break;
+      case 'flak':
+        ring(0, 0, s*0.31, true); ring(0, 0, s*0.18, false);
+        ctx.save(); ctx.globalAlpha *= 0.6; ctx.beginPath();
+        ctx.moveTo(-s*0.18, 0); ctx.lineTo(s*0.18, 0); ctx.moveTo(0, -s*0.18); ctx.lineTo(0, s*0.18); ctx.stroke(); ctx.restore(); break;
+      case 'cannon':
+        ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.lineWidth = 1.8; ring(0, s*0.08, s*0.62, true); ctx.restore();
+        ctx.save(); ctx.globalAlpha *= 0.5; ring(0, s*0.08, s*0.43, false); ctx.restore();
+        dot(0, s*0.08, s*0.14, 0.7); break;
+      case 'missile':
+        ctx.save(); ctx.globalAlpha *= 0.4; ctx.beginPath();
+        for(const yy of [0.5, 0.72]){ ctx.moveTo(-s*0.85, yy*s); ctx.lineTo(s*0.85, yy*s); }
+        ctx.stroke(); ctx.restore(); break;
+      case 'railgun':
+        ctx.save(); ctx.globalAlpha *= 0.25; ctx.fillRect(-s*1.7, -s*0.12, s*3.4, s*0.24); ctx.restore();
+        ctx.save(); ctx.globalAlpha *= 0.35; ctx.beginPath();
+        for(let k = -1.5; k <= 1.2; k += 0.5){ ctx.moveTo(k*s, -s*0.8); ctx.lineTo(k*s, s*0.8); }
+        ctx.stroke(); ctx.restore(); break;
+      case 'broadside':
+        for(const k of [-1.35, -0.45, 0.45, 1.35]) ring(k*s, s*0.1, s*0.3, true);
+        break;
+    }
+  });
+}
+
+function drawWeaponBarrels(w){
+  wFrame(w, (d, bw, bh, s) => {
+    const col = isPaint() ? PAINT.weapons : d.color;
+    ctx.fillStyle = col;
+    const muz = (xc, y, wd) => {
+      ctx.beginPath(); ctx.moveTo(xc - wd/2, y); ctx.lineTo(xc - wd*0.85, y - s*0.09);
+      ctx.lineTo(xc + wd*0.85, y - s*0.09); ctx.lineTo(xc + wd/2, y); ctx.closePath(); ctx.fill();
+    };
+    switch(d.id){
+      case 'pulse':
+        for(const sx of [-1, 1]){ metalBar(sx*s*0.11 - s*0.05, -s*0.95, s*0.1, s*0.95, col); muz(sx*s*0.11, -s*0.95, s*0.1); }
+        break;
+      case 'pd':
+        metalBar(-s*0.1, -s*0.9, s*0.2, s*0.9, col);
+        ctx.save(); ctx.globalAlpha *= 0.55; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath();
+        for(const dx of [-0.04, 0.04]){ ctx.moveTo(dx*s, -s*0.9); ctx.lineTo(dx*s, 0); }
+        ctx.stroke(); ctx.restore();
+        metalBar(-s*0.14, -s*0.97, s*0.28, s*0.07, col);
+        break;
+      case 'flak':
+        for(const a of [-0.36, 0, 0.36]){
+          ctx.save(); ctx.rotate(a);
+          metalBar(-s*0.06, -s*0.8, s*0.12, s*0.8, col); muz(0, -s*0.8, s*0.12);
+          ctx.restore();
+        }
+        break;
+      case 'cannon':
+        metalBar(-s*0.21, -s*0.8, s*0.42, s*0.9, col);
+        metalBar(-s*0.13, -s*1.95, s*0.26, s*1.2, col);
+        metalBar(-s*0.17, -s*1.3, s*0.34, s*0.05, col);
+        metalBar(-s*0.17, -s*1.55, s*0.34, s*0.05, col);
+        metalBar(-s*0.2, -s*1.95, s*0.4, s*0.22, col);
+        ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath();
+        for(const dx of [-0.07, 0.07]){ ctx.moveTo(dx*s, -s*1.92); ctx.lineTo(dx*s, -s*1.76); }
+        ctx.stroke(); ctx.restore();
+        break;
+      case 'missile':
+        for(const k of [-0.75, -0.25, 0.25, 0.75]){
+          metalBar(k*s - s*0.1, -s*1.1, s*0.2, s*0.95, col);
+          ctx.beginPath(); ctx.moveTo(k*s - s*0.1, -s*1.1); ctx.lineTo(k*s, -s*1.42); ctx.lineTo(k*s + s*0.1, -s*1.1); ctx.closePath(); ctx.fill();
+        }
+        break;
+      case 'railgun':
+        for(const yy of [-0.2, 0.2]) metalBar(-s*1.4, yy*s - s*0.06, s*4.8, s*0.12, col);
+        for(const k of [-0.8, -0.2, 0.4, 1.0, 2.4, 3.0]){
+          ctx.fillStyle = 'rgb(12,24,38)'; ctx.fillRect(k*s - s*0.04, -s*0.32, s*0.08, s*0.64);
+          ctx.strokeStyle = col; ctx.lineWidth = 1.1; ctx.strokeRect(k*s - s*0.04, -s*0.32, s*0.08, s*0.64);
+        }
+        ctx.save(); ctx.globalAlpha *= 0.75; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+        ctx.shadowColor = col; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.moveTo(-s*1.4, 0); ctx.lineTo(s*3.4, 0); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = col; ctx.fillRect(s*3.32, -s*0.3, s*0.1, s*0.6);
+        break;
+      case 'broadside':
+        for(const k of [-1.35, -0.45, 0.45, 1.35]){
+          metalBar(k*s - s*0.09, -s*1.55, s*0.18, s*1.65, col);
+          metalBar(k*s - s*0.13, -s*1.55, s*0.26, s*0.1, col);
+          muz(k*s, -s*1.55, s*0.18);
+        }
+        break;
+    }
+  });
+}
+
+/* ---------- engines ---------- */
+function drawThrust(c, r, blocked, ghost){
+  const x0 = c*CS, y0 = (r+1)*CS, len = PH - y0;
+  if(len <= 0) return;
+  const col = blocked ? '255,75,105' : '255,150,90';
+  ctx.save();
+  ctx.fillStyle = blocked ? 'rgba(255,65,95,0.11)' : 'rgba(255,145,75,0.075)';
+  ctx.fillRect(x0 + CS*.12, y0, CS*.76, len);
+  const g = ctx.createLinearGradient(0, y0, 0, PH);
+  g.addColorStop(0, `rgba(${col},${ghost ? 0.95 : 0.72})`);
+  g.addColorStop(.55, `rgba(${col},${ghost ? 0.45 : 0.25})`);
+  g.addColorStop(1, `rgba(${col},0)`);
+  ctx.strokeStyle = g; ctx.lineWidth = blocked ? 2 : 1.4;
+  ctx.setLineDash(blocked ? [5,4] : [10,7]);
+  ctx.beginPath();
+  for(const k of [.12, .28, .5, .72, .88]){
+    ctx.moveTo(x0 + k*CS, y0); ctx.lineTo(x0 + k*CS, PH);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.globalAlpha = blocked ? .8 : .35;
+  ctx.strokeStyle = `rgba(${col},.8)`; ctx.lineWidth = 1;
+  for(let yy = y0 + CS*.45; yy < PH; yy += CS*.65){
+    ctx.beginPath(); ctx.moveTo(x0+CS*.2, yy); ctx.lineTo(x0+CS*.8, yy); ctx.stroke();
+  }
+  const fl = Math.min(len, CS*1.8);
+  const g2 = ctx.createLinearGradient(0, y0, 0, y0 + fl);
+  g2.addColorStop(0, blocked ? 'rgba(255,90,120,0.72)' : 'rgba(255,235,180,0.8)');
+  g2.addColorStop(.45, blocked ? 'rgba(255,60,95,0.38)' : 'rgba(255,135,70,0.42)');
+  g2.addColorStop(1, `rgba(${col},0)`);
+  ctx.globalAlpha = 1; ctx.fillStyle = g2;
+  ctx.beginPath(); ctx.moveTo(x0+CS*.2,y0); ctx.lineTo(x0+CS*.8,y0);
+  ctx.lineTo(x0+CS*.94,y0+fl*.28); ctx.lineTo(x0+CS*.5,y0+fl);
+  ctx.lineTo(x0+CS*.06,y0+fl*.28); ctx.closePath(); ctx.fill();
+  if(blocked){
+    ctx.fillStyle = '#ff5b78'; ctx.font = `bold ${Math.max(8,CS*.28)}px monospace`;
+    ctx.textAlign = 'center'; ctx.fillText('BLOCKED', x0+CS/2, Math.min(PH-4,y0+CS*1.5));
+  }
+  ctx.restore();
+}
+function drawEngines(){
+  if(!engines.length) return;
+  const P = isPaint();
+  const EC = P ? PAINT.body : ENGINE_COLOR;
+  const has = new Set(engines.map(e => e.c + ',' + e.r));
+  const E = (c, r) => has.has(c + ',' + r);
+  ctx.save();
+  ctx.globalAlpha = (P ? 1 : (layer === 4 ? 1 : 0.5)) * fdim;
+
+  if(!P) for(const e of engines) if(!E(e.c, e.r+1)) drawThrust(e.c, e.r, !!engineBlocker(e.c, e.r), false);
+
+  const fill = new Path2D(), seg = new Map();
+  for(const e of engines){
+    fill.rect(e.c*CS, e.r*CS, CS, CS);
+    addSegs(seg, [e.c, e.r], [e.c+1, e.r]);     addSegs(seg, [e.c+1, e.r], [e.c+1, e.r+1]);
+    addSegs(seg, [e.c, e.r+1], [e.c+1, e.r+1]); addSegs(seg, [e.c, e.r], [e.c, e.r+1]);
+  }
+  ctx.fillStyle = P ? shade(PAINT.body, 0.55) : 'rgba(46,22,14,0.96)';
+  ctx.fill(fill);
+
+  for(const e of engines){
+    const x = e.c*CS, y = e.r*CS;
+    const L = E(e.c-1, e.r), R = E(e.c+1, e.r), U = E(e.c, e.r-1), D = E(e.c, e.r+1);
+    const x0 = x + (L ? 0 : 4), x1 = x + CS - (R ? 0 : 4), y0 = y + (U ? 0 : 4);
+    const yb = D ? y + CS : y + CS*0.56;
+
+    ctx.fillStyle = P ? shade(PAINT.body, 0.85, 0.5) : 'rgba(120,54,28,0.5)';
+    ctx.fillRect(x0, y0, x1 - x0, yb - y0);
+    ctx.save();
+    ctx.strokeStyle = EC; ctx.lineWidth = 1.1; ctx.globalAlpha *= 0.55;
+    ctx.beginPath();
+    for(const k of [0.3, 0.7]){ ctx.moveTo(x + k*CS, y0); ctx.lineTo(x + k*CS, yb); }
+    ctx.moveTo(x0, y + CS*0.2); ctx.lineTo(x1, y + CS*0.2);
+    ctx.stroke();
+    ctx.restore();
+
+    if(!D){
+      const nb = y + CS*0.56, nt = y + CS - 1;
+      ctx.beginPath();
+      ctx.moveTo(x + CS*0.2, nb); ctx.lineTo(x + CS*0.8, nb); ctx.lineTo(x + CS*0.95, nt); ctx.lineTo(x + CS*0.05, nt);
+      ctx.closePath();
+      // Nozzle throat always black, inner glow always orange, in every mode.
+      ctx.fillStyle = 'rgb(18,9,7)'; ctx.fill();
+      const gl = ctx.createRadialGradient(x + CS*0.5, nt, 1, x + CS*0.5, nt, CS*0.55);
+      gl.addColorStop(0, 'rgba(255,235,190,0.95)');
+      gl.addColorStop(0.5, 'rgba(255,122,77,0.55)');
+      gl.addColorStop(1, 'rgba(255,122,77,0)');
+      ctx.fillStyle = gl; ctx.fill();
+      ctx.strokeStyle = EC; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(x + CS*0.17, nb); ctx.lineTo(x + CS*0.83, nb); ctx.stroke();
+    }
+  }
+
+  ctx.save();
+  ctx.strokeStyle = EC; ctx.lineWidth = 2; ctx.lineCap = 'butt';
+  ctx.shadowColor = EC; ctx.shadowBlur = P ? 5 : 10;
+  ctx.beginPath();
+  for(const q of seg.values()) if(q.n === 1){ ctx.moveTo(q.x1*CS, q.y1*CS); ctx.lineTo(q.x2*CS, q.y2*CS); }
+  ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+}
+
+function engineStats(){
+  const map = new Map(engines.map(e => [e.c + ',' + e.r, e]));
+  const seen = new Set();
+  let thrust = 0;
+  for(const e of engines){
+    const k0 = e.c + ',' + e.r;
+    if(seen.has(k0)) continue;
+    seen.add(k0);
+    const st = [k0]; let n = 0;
+    while(st.length){
+      const [c, r] = st.pop().split(',').map(Number); n++;
+      for(const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const k = (c+dc) + ',' + (r+dr);
+        if(map.has(k) && !seen.has(k)){ seen.add(k); st.push(k); }
+      }
+    }
+    thrust += n*(10 + 2*(n-1));
+  }
+  return thrust;
+}
+
+function drawModule(m){
+  const def = MODULES.find(d => d.id === m.kind);
+  const s = MODULE_SIZE*CS, x = m.c*CS, y = m.r*CS, cx = x + s/2, cy = y + s/2;
+
+  ctx.beginPath(); ctx.rect(x+4, y+4, s-8, s-8);
+  ctx.fillStyle = 'rgba(8,18,30,0.84)'; ctx.fill();
+  ctx.save();
+  ctx.setLineDash([7,5]);
+  ctx.shadowColor = def.color; ctx.shadowBlur = 12;
+  ctx.strokeStyle = def.color; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  for(let i = 0; i < 6; i++){
+    const a = (Math.PI/3)*i - Math.PI/2;
+    const px = cx + Math.cos(a)*CS*0.62, py = cy + Math.sin(a)*CS*0.62;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = prev*0.22; ctx.fillStyle = def.color; ctx.fill();
+  ctx.globalAlpha = prev; ctx.strokeStyle = def.color; ctx.lineWidth = 1.3; ctx.stroke();
+}
+
+/* ---------- cabins ---------- */
+function drawCabinBody(bw, bh){
+  const P = isPaint();
+  const body = P ? PAINT.body : '#3a5873';
+  const glass = P ? PAINT.glass : '#8fd7ff';
+  const edge = P ? PAINT.edge : '#9fd2f2';
+  const x = -bw/2 + 3, y = -bh/2 + 3, w = bw - 6, h = bh - 6;
+
+  ctx.fillStyle = shade(body, 0.9);
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = edge; ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+
+  ctx.save();
+  ctx.strokeStyle = shade(edge, 0.8, 0.5);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 5, y + 5, w - 10, h - 10);
+  ctx.restore();
+
+  const inset = Math.min(CS*0.5, w*0.12);
+  const gx = x + inset, gw = w - inset*2;
+  const decks = Math.max(1, Math.round(h/(CS*1.6)));
+  const deckH = (h - inset*2)/decks;
+
+  for(let i = 0; i < decks; i++){
+    const gy = y + inset + i*deckH + deckH*0.2;
+    const gh = Math.max(3, deckH*0.44);
+    ctx.fillStyle = glass;
+    ctx.fillRect(gx, gy, gw, gh);
+
+    ctx.save();
+    ctx.strokeStyle = shade(edge, 0.7, 0.65);
+    ctx.lineWidth = 1;
+    const n = Math.max(2, Math.round(gw/(CS*0.9)));
+    for(let k = 1; k < n; k++){
+      const mx = gx + gw*k/n;
+      ctx.beginPath(); ctx.moveTo(mx, gy); ctx.lineTo(mx, gy + gh); ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = edge; ctx.lineWidth = 1;
+    ctx.strokeRect(gx + 0.5, gy + 0.5, gw - 1, gh - 1);
+  }
+
+  ctx.fillStyle = shade(edge, 0.9);
+  for(const [px, py] of [[x+2, y+2], [x+w-6, y+2], [x+2, y+h-6], [x+w-6, y+h-6]]){
+    ctx.fillRect(px, py, 4, 4);
+  }
+}
+
+/* ---------- utilities ---------- */
+function drawUtility(u){
+  const def = UTILITIES.find(d => d.id === u.kind); if(!def) return;
+  const rotQ = (u.rot || 0) % 4;
+  const w = rotQ % 2 ? def.h : def.w, h = rotQ % 2 ? def.w : def.h;
+  const cx = (u.c + w/2)*CS, cy = (u.r + h/2)*CS;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotQ*Math.PI/2);
+
+  const bw = def.w*CS, bh = def.h*CS;
+  if(def.cabin){ drawCabinBody(bw, bh); ctx.restore(); return; }
+
+  const col = (isPaint() && def.id === 'drone') ? PAINT.weapons : def.color;
+  const x = -bw/2 + 3, y = -bh/2 + 3, ww = bw - 6, hh = bh - 6;
+  const ch = Math.min(ww, hh)*0.2;
+
+  ctx.beginPath();
+  ctx.moveTo(x+ch, y); ctx.lineTo(x+ww-ch, y); ctx.lineTo(x+ww, y+ch);
+  ctx.lineTo(x+ww, y+hh-ch); ctx.lineTo(x+ww-ch, y+hh); ctx.lineTo(x+ch, y+hh);
+  ctx.lineTo(x, y+hh-ch); ctx.lineTo(x, y+ch); ctx.closePath();
+  ctx.fillStyle = 'rgba(8,18,30,0.94)'; ctx.fill();
+  ctx.save(); ctx.globalAlpha *= 0.13; ctx.fillStyle = col; ctx.fill(); ctx.restore();
+  ctx.save();
+  ctx.shadowColor = col; ctx.shadowBlur = isPaint() ? 9 : (layer === 4 ? 9 : 3);
+  ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.restore();
+
+  if(ww > 60){
+    ctx.save(); ctx.globalAlpha *= 0.28; ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.strokeRect(x+5, y+5, ww-10, hh-10); ctx.restore();
+    ctx.fillStyle = '#8aa8bf';
+    for(const [bx, by] of [[x+10,y+10],[x+ww-10,y+10],[x+10,y+hh-10],[x+ww-10,y+hh-10]]){
+      ctx.beginPath(); ctx.arc(bx, by, 1.6, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+
+  if(u.kind === 'comm'){
+    ctx.beginPath(); ctx.arc(0, CS*0.06, CS*0.20, 0, Math.PI); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, CS*0.26); ctx.lineTo(0, CS*0.34);
+    ctx.moveTo(0, CS*0.06); ctx.lineTo(0, -CS*0.04);
+    ctx.stroke();
+    ctx.save(); ctx.globalAlpha *= 0.65;
+    for(const R of [CS*0.28, CS*0.37]){
+      ctx.beginPath(); ctx.arc(0, CS*0.06, R, Math.PI*1.15, Math.PI*1.85); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  else if(u.kind === 'drone'){
+    for(const bx of [-26, 0, 26]){
+      ctx.save(); ctx.globalAlpha *= 0.9;
+      ctx.beginPath(); ctx.rect(bx - 9, -16, 18, 20);
+      ctx.fillStyle = 'rgba(10,22,34,0.92)'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.restore();
+      ctx.beginPath();
+      ctx.moveTo(bx, 0); ctx.lineTo(bx - 5, -10); ctx.lineTo(bx + 5, -10); ctx.closePath();
+      ctx.fillStyle = col; ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.moveTo(0, 21); ctx.lineTo(-9, 8); ctx.lineTo(9, 8); ctx.closePath();
+    ctx.fillStyle = col; ctx.fill();
+  }
+  else {
+    ctx.beginPath();
+    ctx.moveTo(0, -CS*0.20); ctx.lineTo(CS*0.20, 0); ctx.lineTo(0, CS*0.20); ctx.lineTo(-CS*0.20, 0);
+    ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, CS*0.05, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -CS*0.35); ctx.lineTo(-CS*0.09, -CS*0.21); ctx.lineTo(CS*0.09, -CS*0.21);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-CS*0.32, 0); ctx.lineTo(-CS*0.25, 0);
+    ctx.moveTo(CS*0.32, 0); ctx.lineTo(CS*0.25, 0);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function droneBayBlocker(u){
+  ensureCells(); const d=(u.rot||0)%4, w=d%2?2:3, h=d%2?3:2;
+  let x,y,dc=0,dr=0;
+  if(d===0){ x=u.c+Math.floor(w/2); y=u.r+h; dr=1; }
+  else if(d===1){ x=u.c-1; y=u.r+Math.floor(h/2); dc=-1; }
+  else if(d===2){ x=u.c+Math.floor(w/2); y=u.r-1; dr=-1; }
+  else { x=u.c+w; y=u.r+Math.floor(h/2); dc=1; }
+  for(let k=0;k<Math.max(W,H);k++){ const c=x+dc*k, r=y+dr*k; if(!inBounds(c,r)) break; if(cellStates[r*W+c] || itemAt(c,r)) return {c,r}; }
+  return null;
+}
+
+function drawItems(list, fn, lyr){
+  ctx.save();
+  ctx.globalAlpha = isPaint() ? fdim : (layer === lyr ? 1 : 0.4) * fdim;
+  for(const it of list) fn(it);
+  ctx.restore();
+}
+
+function drawGhostRect(c, r, w, h, ok){
+  ctx.save();
+  ctx.fillStyle   = ok ? 'rgba(94,227,255,0.14)' : 'rgba(255,90,110,0.18)';
+  ctx.strokeStyle = ok ? 'rgba(94,227,255,0.90)' : 'rgba(255,90,110,0.90)';
+  ctx.lineWidth = 1.6; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.rect(c*CS + 2, r*CS + 2, w*CS - 4, h*CS - 4);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawGhost(){
+  if(gestured || panning || panMode || spaceDown) return;
+  const {c, r} = hover;
+  if(!inBounds(c, r)) return;
+  ensureCells();
+
+  if(isPaint()){
+    if(overlayMode === 'off') return;
+    if(!cellStates[r*W + c]) return;
+    const col = overlayMode === 'erase' ? 'rgba(255,90,110,0.9)' : PAINT.overlay;
+    ctx.save();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,4]);
+    ctx.strokeRect(c*CS + 1.5, r*CS + 1.5, CS - 3, CS - 3);
+    if(mirror){
+      const mc = W - 1 - c;
+      if(mc !== c && inBounds(mc, r) && cellStates[r*W + mc]){
+        ctx.strokeRect(mc*CS + 1.5, r*CS + 1.5, CS - 3, CS - 3);
+      }
+    }
+    ctx.restore();
+    return;
+  }
+
+  if(removeMode){
+    if(layer === 0){
+      const t = cellStates[r*W + c];
+      t ? drawGhostRect(t.c, t.r, t.w, t.h, false) : drawGhostRect(c, r, 1, 1, false);
+    } else {
+      const it = layer===4 ? (utilityAt(c,r) || engineAt(c,r)) : [null, energyAt, weaponAt, moduleAt, null][layer](c, r);
+      if(it){
+        let w = it.w !== undefined ? it.w : (it.s || MODULE_SIZE);
+        let h = it.h !== undefined ? it.h : w;
+        if(layer===4 && it.kind && it.kind!=='engine'){
+          const d=UTILITIES.find(u=>u.id===it.kind); w=(it.rot||0)%2?d.h:d.w; h=(it.rot||0)%2?d.w:d.h;
+        }
+        drawGhostRect(it.c, it.r, w, h, false);
+      } else drawGhostRect(c, r, 1, 1, false);
+    }
+    return;
+  }
+
+  if(layer === 0){
+    const b = basePoly(selTile, rot, flipT), a = anchorFor(b.w, b.h, c, r);
+    const ok = a.c >= 0 && a.r >= 0 && a.c + b.w <= W && a.r + b.h <= H && !exhaustBlocked(a.c, a.r, b.w, b.h);
+    ctx.save();
+    ctx.fillStyle   = ok ? 'rgba(94,227,255,0.22)' : 'rgba(255,90,110,0.22)';
+    ctx.strokeStyle = ok ? 'rgba(94,227,255,0.90)' : 'rgba(255,90,110,0.90)';
+    ctx.lineWidth = 1.6; ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    b.p.forEach(([x,y], i) => i ? ctx.lineTo((x+a.c)*CS, (y+a.r)*CS) : ctx.moveTo((x+a.c)*CS, (y+a.r)*CS));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  } else if(layer === 1){
+    const s = EN_BY_ID[selEnergy].size, a = anchorFor(s, s, c, r);
+    drawGhostRect(a.c, a.r, s, s, canPlaceEnergy(selEnergy, a.c, a.r));
+  } else if(layer === 2){
+    const {w, h} = weaponSize(selWeapon), a = anchorFor(w, h, c, r);
+    ctx.save(); ctx.globalAlpha = 0.55;
+    const gw = {kind: selWeapon, c: a.c, r: a.r, w, h, rot: rot % 4};
+    drawWeapon(gw); drawWeaponBarrels(gw);
+    ctx.restore();
+    drawGhostRect(a.c, a.r, w, h, canPlaceWeapon(selWeapon, a.c, a.r) && weapons.length < MAX_WEAPONS);
+  } else if(layer === 3){
+    const a = anchorFor(MODULE_SIZE, MODULE_SIZE, c, r);
+    drawGhostRect(a.c, a.r, MODULE_SIZE, MODULE_SIZE, canPlaceModule(selModule, a.c, a.r) && modules.length < MAX_MODULES);
+  } else {
+    if(selUtility==='engine'){
+      const ok = canPlaceBlock(c, r, 1, 1, true), blk = ok ? engineBlocker(c, r) : null;
+      drawThrust(c, r, !!blk, true);
+      if(blk) drawGhostRect(blk.c, blk.r, 1, 1, false);
+      drawGhostRect(c, r, 1, 1, ok && !blk);
+    } else {
+      const def=UTILITIES.find(u=>u.id===selUtility), w=rot%2?def.h:def.w, h=rot%2?def.w:def.h, a=anchorFor(w,h,c,r);
+      const candidate={kind:def.id,c:a.c,r:a.r,rot:rot%4};
+      const lane=def.id==='drone'?droneBayBlocker(candidate):null;
+      const plateOk=def.id==='scanner' ? !!(inBounds(a.c,a.r) && cellStates[a.r*W+a.c]) : canPlaceBlock(a.c,a.r,w,h);
+      const ok=plateOk && !(def.id==='comm' && utilities.some(u=>u.kind==='comm')) && !exhaustBlocked(a.c,a.r,w,h) && !lane;
+      ctx.save(); ctx.globalAlpha=.65; drawUtility(candidate); ctx.restore();
+      drawGhostRect(a.c,a.r,w,h,ok);
+      if(lane) drawGhostRect(lane.c,lane.r,1,1,false);
+    }
+  }
+}
+
+function drawFloor(active, dim){
+  fdim = dim;
+  ctx.save();
+  ctx.translate(-PW/2, -PH/2);
+
+  if(isPaint()){
+    drawArmorPaint();
+    if(cur === 0){
+      drawEngines();
+      const shownUtils = utilities.filter(u => {
+        const d = UTILITIES.find(x => x.id === u.kind);
+        return u.kind === 'drone' || (d && d.cabin);
+      });
+      drawItems(shownUtils, drawUtility, 4);
+      drawItems(modules, drawModule, 3);
+      drawItems(weapons, drawWeapon,     2);
+      drawItems(weapons, drawWeaponBarrels, 2);
+    }
+  } else {
+    if(active) drawGrid();
+    drawArmor();
+    if(cur === 0){
+      drawItems(energy,  drawEnergyItem, 1);
+      drawEngines();
+      drawItems(utilities, drawUtility, 4);
+      drawItems(weapons, drawWeapon,     2);
+      drawItems(modules, drawModule,     3);
+      drawItems(weapons, drawWeaponBarrels, 2);
+    }
+  }
+
+  ctx.restore();
+  fdim = 1;
+}
+
+function render(){
+  sync();
+  const act = cur;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, CW, CH);
+  drawBackdrop();
+
+  ctx.setTransform(dpr*cam.z, 0, 0, dpr*cam.z, dpr*cam.x, dpr*cam.y);
+  for(let i = floors.length - 1; i >= 0; i--){
+    load(i); ensureCells();
+    const dim = isPaint() ? 1 : (i === act ? 1 : (i === 0 ? 0.35 : 0.6));
+    drawFloor(i === act, dim);
+    sync();
+  }
+  load(act); ensureCells();
+  ctx.save(); ctx.translate(-PW/2, -PH/2); drawGhost(); ctx.restore();
+  sync();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if(!isPaint() && !weapons.length && !energy.length && !modules.length && !engines.length && !utilities.length && floors.every(f => !f.tiles.length)){
+    ctx.save();
+    ctx.globalAlpha = 0.38; ctx.fillStyle = '#7fb6dd';
+    ctx.font = '600 13px ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.fillText('PICK A TILE · CLICK OR DRAG TO PLACE ARMOR', CW/2, CH - 22);
+    ctx.restore();
+  }
+  $('zoomTag').textContent = Math.round(cam.z*100) + '%';
+}
+
+/* =========================================================
+   POINTER HELPERS
+   ========================================================= */
+function lg(e){
+  const rect = canvas.getBoundingClientRect(), k = CW/rect.width;
+  return { x: (e.clientX - rect.left)*k, y: (e.clientY - rect.top)*k };
+}
+function localPos(e){
+  const q = lg(e);
+  return { x: (q.x - cam.x)/cam.z + PW/2, y: (q.y - cam.y)/cam.z + PH/2 };
+}
+function cellAt(x, y){ return { c: Math.floor(x/CS), r: Math.floor(y/CS) }; }
+
+/* =========================================================
+   ARMOR TILE ACTIONS
+   ========================================================= */
+function putTile(kind, rt, fl, c, r){
+  const b = basePoly(kind, rt, fl);
+  if(c < 0 || r < 0 || c + b.w > W || r + b.h > H) return false;
+  ensureCells();
+  const hitSet = new Set();
+  for(let j = 0; j < b.h; j++) for(let i = 0; i < b.w; i++){
+    const t = cellStates[(r+j)*W + c+i]; if(t) hitSet.add(t);
+  }
+  if(hitSet.size === 1){
+    const t = [...hitSet][0];
+    if(t.kind === kind && t.rot === rt && t.flip === fl && t.c === c && t.r === r) return true;
+  }
+  pushUndoOnce();
+  tiles = tiles.filter(t => !hitSet.has(t));
+  tiles.push({kind, rot:rt, flip:fl, c, r, w:b.w, h:b.h, p:b.p});
+  markDirty();
+  return true;
+}
+
+function placeTileAt(c, r){
+  const b = basePoly(selTile, rot, flipT), a = anchorFor(b.w, b.h, c, r);
+  if(exhaustBlocked(a.c, a.r, b.w, b.h)){ toast(EXH_MSG); return; }
+  if(!putTile(selTile, rot, flipT, a.c, a.r)) return;
+  if(mirror){
+    const mc = W - a.c - b.w;
+    if((mc + b.w <= a.c || mc >= a.c + b.w) && !exhaustBlocked(mc, a.r, b.w, b.h))
+      putTile(selTile, (4 - rot) % 4, !flipT, mc, a.r);
+  }
+  prune();
+}
+
+function removeTileAt(c, r){
+  ensureCells();
+  const kill = new Set();
+  let t = inBounds(c, r) ? cellStates[r*W + c] : null;
+  if(t) kill.add(t);
+  if(mirror){ const m = inBounds(W-1-c, r) ? cellStates[r*W + (W-1-c)] : null; if(m) kill.add(m); }
+  if(!kill.size) return;
+  pushUndoOnce();
+  tiles = tiles.filter(x => !kill.has(x));
+  markDirty();
+  prune();
+}
+
+function paint(c, r){
+  if(!inBounds(c, r)) return;
+  if(layer === 0) drawingErase ? removeTileAt(c, r) : placeTileAt(c, r);
+  else            drawingErase ? removeItemAt(c, r)  : placeUtilityAt(c, r, true);
+  render(); updateStats();
+}
+
+/* ---------- paint overlay ---------- */
+function paintOverlayCell(c, r, erase){
+  if(!inBounds(c, r)) return;
+  ensureCells();
+  if(!cellStates[r*W + c]) return;
+  const f = floors[cur];
+  if(!f.overlay) f.overlay = {};
+
+  const apply = (cc, rr) => {
+    const k = cc + ',' + rr;
+    if(erase){
+      if(f.overlay[k] !== undefined){ pushUndoOnce(); delete f.overlay[k]; }
+    } else {
+      if(f.overlay[k] !== PAINT.overlay){ pushUndoOnce(); f.overlay[k] = PAINT.overlay; }
+    }
+  };
+
+  apply(c, r);
+  if(mirror){
+    const mc = W - 1 - c;
+    if(mc !== c && inBounds(mc, r) && cellStates[r*W + mc]) apply(mc, r);
+  }
+}
+
+/* =========================================================
+   ITEM ACTIONS
+   ========================================================= */
+function placeEnergyAt(c, r){
+  if(cur !== 0){ toast('Upper floors are armor only'); return; }
+  const def = EN_BY_ID[selEnergy], s = def.size, a = anchorFor(s, s, c, r);
+  if(exhaustBlocked(a.c, a.r, s, s)){ toast(EXH_MSG); return; }
+  if(!canPlaceEnergy(def.id, a.c, a.r)){ toast('Needs a clear block of full square plates'); return; }
+  pushUndoOnce();
+  energy.push({uid: uid++, id: def.id, c: a.c, r: a.r, s});
+  if(mirror){
+    const mc = W - a.c - s;
+    if(mc !== a.c && canPlaceEnergy(def.id, mc, a.r)) energy.push({uid: uid++, id: def.id, c: mc, r: a.r, s});
+  }
+  render(); updateStats();
+}
+
+function placeWeaponAt(c, r){
+  if(cur !== 0){ toast('Upper floors are armor only'); return; }
+  if(weapons.length >= MAX_WEAPONS){ toast('All 8 weapon slots used'); return; }
+  const def = WEAPONS.find(w => w.id === selWeapon);
+  const {w, h} = weaponSize(def.id), a = anchorFor(w, h, c, r);
+  if(exhaustBlocked(a.c, a.r, w, h)){ toast(EXH_MSG); return; }
+  if(!canPlaceWeapon(def.id, a.c, a.r)){ toast('Invalid — needs clear full square plates (no energy under it)'); return; }
+  pushUndoOnce();
+  weapons.push({uid: uid++, kind: def.id, c: a.c, r: a.r, w, h, rot: rot % 4});
+  if(mirror){
+    const mc = W - a.c - w;
+    if(mc !== a.c && weapons.length < MAX_WEAPONS && canPlaceWeapon(def.id, mc, a.r))
+      weapons.push({uid: uid++, kind: def.id, c: mc, r: a.r, w, h, rot: (4 - rot % 4) % 4});
+  }
+  render(); updateStats();
+}
+
+function placeModuleAt(c, r){
+  if(cur !== 0){ toast('Upper floors are armor only'); return; }
+  if(modules.length >= MAX_MODULES){ toast('All 4 module bays used'); return; }
+  const a = anchorFor(MODULE_SIZE, MODULE_SIZE, c, r);
+  if(exhaustBlocked(a.c, a.r, MODULE_SIZE, MODULE_SIZE)){ toast(EXH_MSG); return; }
+  if(!canPlaceModule(selModule, a.c, a.r)){ toast('Modules need a clear 3×3 of full square plates'); return; }
+  pushUndoOnce();
+  modules.push({uid: uid++, kind: selModule, c: a.c, r: a.r});
+  if(mirror){
+    const mc = W - a.c - MODULE_SIZE;
+    if(mc !== a.c && modules.length < MAX_MODULES && canPlaceModule(selModule, mc, a.r))
+      modules.push({uid: uid++, kind: selModule, c: mc, r: a.r});
+  }
+  render(); updateStats();
+}
+
+function placeUtilityAt(c,r,quiet){
+  if(cur!==0){ if(!quiet) toast('Upper floors are armor only'); return; }
+  if(selUtility==='engine'){ placeEngineAt(c,r,quiet); return; }
+  const def=UTILITIES.find(u=>u.id===selUtility); if(!def) return;
+  if(def.id==='comm' && utilities.some(u=>u.kind==='comm')){ if(!quiet) toast('Only one Communication Array is allowed'); return; }
+  const w=rot%2?def.h:def.w, h=rot%2?def.w:def.h, a=anchorFor(w,h,c,r);
+  ensureCells();
+  if(a.c<0||a.r<0||a.c+w>W||a.r+h>H){ if(!quiet) toast('Utility is out of bounds'); return; }
+  if(def.id==='scanner'){
+    if(!cellStates[a.r*W+a.c]){ if(!quiet) toast('Scanner must sit on an armor tile'); return; }
+    if(itemAt(a.c,a.r)){ if(!quiet) toast('That tile is already occupied'); return; }
+  } else if(!canPlaceBlock(a.c,a.r,w,h)){ if(!quiet) toast('Needs clear full square plates'); return; }
+  if(exhaustBlocked(a.c,a.r,w,h)){ if(!quiet) toast(EXH_MSG); return; }
+  const candidate={kind:def.id,c:a.c,r:a.r,rot:rot%4};
+  if(def.id==='drone'){
+    const blk=droneBayBlocker(candidate);
+    if(blk){ if(!quiet) toast('Drone bay launch direction must be clear of tiles'); return; }
+  }
+  pushUndoOnce(); utilities.push({uid:uid++,...candidate});
+  if(mirror && def.id!=='comm'){
+    const mc=W-a.c-w;
+    const other={kind:def.id,c:mc,r:a.r,rot:(4-rot%4)%4};
+    if(mc!==a.c && mc>=0 && mc+w<=W && (def.id==='scanner' ? !!cellStates[a.r*W+mc] && !itemAt(mc,a.r) : canPlaceBlock(mc,a.r,w,h)) && !(def.id==='drone' && droneBayBlocker(other))) utilities.push({uid:uid++,...other});
+  }
+  render(); updateStats();
+}
+
+function placeEngineAt(c, r, quiet){
+  if(cur !== 0){ toast('Upper floors are armor only'); return; }
+  if(!canPlaceBlock(c, r, 1, 1, true)){ if(!quiet) toast('Engines need a free full square plate'); return; }
+  if(engineBlocker(c, r)){ toast(EXH_MSG + ' — clear the blocks behind it'); return; }
+  pushUndoOnce();
+  engines.push({uid: uid++, c, r, s: 1});
+  if(mirror){
+    const mc = W - 1 - c;
+    if(mc !== c && canPlaceBlock(mc, r, 1, 1, true) && !engineBlocker(mc, r)) engines.push({uid: uid++, c: mc, r, s: 1});
+  }
+}
+
+function removeItemAt(c, r){
+  const find = layer===4 ? (x,y) => utilityAt(x,y) || engineAt(x,y) : [null, energyAt, weaponAt, moduleAt, null][layer];
+  const kill = new Set();
+  let it = find(c, r); if(it) kill.add(it);
+  if(mirror){ it = find(W-1-c, r); if(it) kill.add(it); }
+  if(!kill.size) return;
+  pushUndoOnce();
+  if(layer === 1) energy  = energy.filter(x => !kill.has(x));
+  if(layer === 2) weapons = weapons.filter(x => !kill.has(x));
+  if(layer === 3) modules = modules.filter(x => !kill.has(x));
+  if(layer === 4){ engines = engines.filter(x => !kill.has(x)); utilities = utilities.filter(x => !kill.has(x)); }
+  if(isPaint() && !hasCabin()){ setLayer(0); toast('Paint mode needs a cabin'); return; }
+  render(); updateStats();
+}
+
+function act(c, r, btn){
+  if(isPaint()) return;
+  const rm = removeMode || btn === 2;
+  if(layer === 0){ drawingErase = rm; paint(c, r); return; }
+  if(layer === 4){ if(rm) removeItemAt(c,r); else placeUtilityAt(c,r,false); return; }
+  if(rm) return removeItemAt(c, r);
+  if(layer === 1) placeEnergyAt(c, r);
+  else if(layer === 2) placeWeaponAt(c, r);
+  else if(layer === 3) placeModuleAt(c, r);
+}
+
+/* =========================================================
+   UI
+   ========================================================= */
+function updateStats(){
+  sync();
+  const a = cur;
+  let n = 0;
+  for(const f of floors) n += f.tiles.length;
+  load(a);
+  $('statArmor').textContent = n;
+
+  let regen = 0, cap = 0;
+  for(const e of energy){ const d = EN_BY_ID[e.id]; d.kind === 'reactor' ? regen += d.stat : cap += d.stat; }
+  $('statRegen').textContent = '+' + regen + '/s';
+  $('statCap').textContent = cap;
+
+  const wEl = $('statWeap');
+  wEl.textContent = weapons.length + ' / ' + MAX_WEAPONS;
+  wEl.classList.toggle('full', weapons.length >= MAX_WEAPONS);
+  const mEl = $('statMod');
+  mEl.textContent = modules.length + ' / ' + MAX_MODULES;
+  mEl.classList.toggle('full', modules.length >= MAX_MODULES);
+  $('statThrust').textContent = engineStats() + (engines.length ? ' · ' + engines.length + ' engines' : '');
+}
+
+function buildFloors(){
+  $('floors').innerHTML = floors.map((f, i) => `
+    <button class="card ${i===cur?'active':''}" data-floor="${i}">
+      <span class="chip" style="--c:${FLOOR_COLORS[i]}"></span>
+      <span class="cardtxt">
+        <b>${i===0 ? 'FLOOR 1 · MAIN' : 'FLOOR 2 · UNDERLAY'}</b>
+        <i>TILE ${f.CS}px · ${f.W}×${f.H}${i===0 ? ' · EVERYTHING' : ' · ARMOR ONLY · BELOW'}</i>
+      </span>
+    </button>`).join('');
+  document.querySelectorAll('.layerbtn').forEach(b => b.classList.toggle('locked', cur !== 0 && +b.dataset.layer > 0 && +b.dataset.layer < 5));
+}
+
+function tileIcon(kind){
+  const b = basePoly(kind, rot, flipT);
+  return `<svg class="tico" viewBox="-.12 -.12 ${b.w+.24} ${b.h+.24}" preserveAspectRatio="xMidYMid meet"><polygon points="${b.p.map(a => a.join(',')).join(' ')}"/></svg>`;
+}
+
+function utilSub(u){
+  if(u.id === 'comm') return '2×1 · ONE ONLY';
+  if(u.id === 'drone') return '3×2 · CLEAR LAUNCH PATH';
+  if(u.id === 'scanner') return '1×1 · ROTATABLE';
+  if(u.cabin) return `${u.w}×${u.h} · CABIN`;
+  return '';
+}
+
+function buildTools(){
+  const el = $('tools'), title = $('toolTitle');
+
+  if(layer === 0){
+    title.textContent = 'Armor Tiles — Floor ' + (cur+1);
+    el.innerHTML = '<div class="grid2">' + Object.keys(TILES).map(k => {
+      const b = basePoly(k, rot, flipT);
+      return `
+      <button class="card ${selTile===k?'active':''}" data-tile="${k}">
+        ${tileIcon(k)}
+        <span class="cardtxt"><b>${TILES[k].name}</b><i>${b.w}×${b.h}</i></span>
+      </button>`;
+    }).join('') + '</div>' +
+      '<div class="note">Click or drag to <b>place tiles</b>; placing over a tile replaces it. <b>Rotate</b> (R) and <b>Flip</b> (F) turn the tile — the palette shows it as it will land. ' +
+      'Only <b>Square</b> tiles count as solid plating for energy, weapons, modules and engines. Armor islands not connected edge-to-edge to the main hull turn <b style="color:#ff5268">red</b>; connect them to the hull. The underlay is exempt.</div>';
+  }
+  else if(layer === 1){
+    title.textContent = 'Energy — Reactors & Cells';
+    el.innerHTML = '<div class="grid2">' + ENERGY.map(e => `
+      <button class="card ${selEnergy===e.id?'active':''}" data-energy="${e.id}">
+        <span class="chip" style="--c:${e.color}"></span>
+        <span class="cardtxt"><b>${e.name}</b><i>${e.size}×${e.size} · ${e.kind==='reactor'?'+'+e.stat+'/s':e.stat+' max'}</i></span>
+      </button>`).join('') + '</div>' +
+      '<div class="note"><b>Reactors</b> regenerate energy, <b>cells</b> raise max energy. Each tier is N×N. They sit on full square plates and nothing else can be placed on top of them.</div>';
+  }
+  else if(layer === 2){
+    title.textContent = 'Weapon Slot — ' + weapons.length + ' / ' + MAX_WEAPONS;
+    el.innerHTML = WEAPONS.map(w => `
+      <button class="card ${selWeapon===w.id?'active':''}" data-weapon="${w.id}">
+        <span class="chip" style="--c:${w.color}"></span>
+        <span class="cardtxt"><b>${w.name}</b><i>${w.cat} · ${rot%2 ? w.h : w.w}×${rot%2 ? w.w : w.h} · AIM ${['↑','→','↓','←'][(rot + (w.a0||0)) % 4]}${w.cat==='BRIDGE'?' · LIMITED ARC':''}</i></span>
+      </button>`).join('') +
+      '<div class="note">Main floor only. <b>Rotate</b> turns the footprint and where it aims. Barrels poke out past the footprint and need no space. Can\'t overlap energy, engines or modules.</div>';
+  }
+  else if(layer === 3){
+    title.textContent = 'Module — ' + modules.length + ' / ' + MAX_MODULES;
+    el.innerHTML = MODULES.map(m => `
+      <button class="card ${selModule===m.id?'active':''}" data-module="${m.id}">
+        <span class="chip" style="--c:${m.color}"></span>
+        <span class="cardtxt"><b>${m.name}</b><i>MODULE · 3×3</i></span>
+      </button>`).join('') +
+      '<div class="note">Need a clear <b>3×3</b> of full square plates on the <b>main floor</b>; can\'t overlap weapons, energy or engines.</div>';
+  }
+  else if(layer === 4){
+    title.textContent = 'Utility Blocks — ' + (engines.length + utilities.length);
+    el.innerHTML = `<button class="card ${selUtility==='engine'?'active':''}" data-utility="engine"><span class="chip" style="--c:${ENGINE_COLOR}"></span><span class="cardtxt"><b>Engine Block</b><i>1×1 · FUSES WHEN ADJACENT</i></span></button>` +
+      UTILITIES.map(u=>`<button class="card ${selUtility===u.id?'active':''}" data-utility="${u.id}"><span class="chip" style="--c:${u.color}"></span><span class="cardtxt"><b>${u.name}</b><i>${utilSub(u)}</i></span></button>`).join('') +
+      '<div class="note"><b>Engine:</b> 1×1 on full square plates; adjacent engines fuse. Keep the projected exhaust corridor empty.<br><br><b>Communication Array:</b> 2×1, only one per ship.<br><br><b>Drone Bay:</b> 3×2, rotate to choose its launch direction. The line ahead must be free of armor tiles; that corridor is reserved.<br><br><b>Directional Scanner:</b> 1×1, rotates with the Rotate control and can sit on any armor tile.<br><br><b>Cabins:</b> required before entering Paint mode. Large superstructures with glass bands; their glass and edge colors are set in the Paint stage.</div>';
+  }
+  else {
+    title.textContent = 'Paint — Final Form';
+    el.innerHTML = '<div class="note">Everything is shown at full opacity in its finished colors. Energy, comms, scanners and all construction guides are hidden to keep the view clean. ' +
+      '<br><br>The <b>Final Colors</b> panel above sets the hull body, the <b>underlay</b> body, the silhouette outline, the weapon tint, and the <b>cabin glass</b> and <b>cabin edge</b> colors. <b>Engines</b> follow the body color; the <b>drone bay</b> follows the weapon color; <b>modules</b> keep their own colors. ' +
+      '<br><br>The hull uses a stepped grid shading — tiles get slightly darker toward the centre. Use the <b>Paint Overlay</b> brush to lay custom colors over the body of the active floor; <b>Erase</b> removes them. Mirror X applies to overlay strokes too. ' +
+      '<br><br>Nothing can be built in this stage.</div>';
+  }
+}
+
+$('tools').addEventListener('click', e => {
+  if(isPaint()) return;
+  const q = a => e.target.closest('[' + a + ']');
+  let b;
+  if((b = q('data-tile')))   { selTile = b.dataset.tile; }
+  else if((b = q('data-energy'))) { selEnergy = b.dataset.energy; }
+  else if((b = q('data-weapon'))) { selWeapon = b.dataset.weapon; }
+  else if((b = q('data-module'))) { selModule = b.dataset.module; }
+  else if((b = q('data-utility'))) { selUtility = b.dataset.utility; }
+  else return;
+  buildTools(); render();
+});
+
+function hasCabin(){
+  return utilities.some(u => {
+    const d = UTILITIES.find(x => x.id === u.kind);
+    return !!(d && d.cabin);
+  });
+}
+
+function setLayer(k){
+  if(k === 5 && !hasCabin()){
+    toast('Place a cabin block before entering Paint mode');
+    return;
+  }
+  if(cur !== 0 && k > 0 && k < 5){ toast('Upper floors are armor only'); return; }
+
+  if(layer === 5 && k !== 5) overlayMode = 'off';
+  if(k === 5) overlayMode = 'off';
+
+  layer = k;
+  document.querySelectorAll('.layerbtn').forEach(x => x.classList.toggle('active', +x.dataset.layer === k));
+  $('paintPanel').style.display = k === 5 ? '' : 'none';
+  updateOverlayButtons();
+  updateCursor();
+  buildTools(); render();
+}
+document.querySelectorAll('.layerbtn').forEach(btn => btn.addEventListener('click', () => setLayer(+btn.dataset.layer)));
+
+function switchFloor(i){
+  if(i < 0 || i >= floors.length || i === cur) return;
+  const wasPaint = isPaint();
+  setFloor(i);
+  layer = wasPaint ? 5 : 0;
+  if(layer === 5) overlayMode = 'off';
+  document.querySelectorAll('.layerbtn').forEach(x => x.classList.toggle('active', +x.dataset.layer === layer));
+  $('paintPanel').style.display = layer === 5 ? '' : 'none';
+  updateOverlayButtons();
+  updateCursor();
+  buildFloors(); buildTools(); render();
+}
+$('floors').addEventListener('click', e => {
+  const b = e.target.closest('[data-floor]');
+  if(b) switchFloor(+b.dataset.floor);
+});
+
+function updRotLbl(){
+  $('rotBtn').textContent  = 'ROTATE ⟳ ' + (rot*90) + '°';
+  $('flipBtn').textContent = 'FLIP ⇋' + (flipT ? ' ON' : '');
+}
+function doRot(){  rot = (rot + 1) % 4; updRotLbl(); buildTools(); render(); }
+function doFlip(){ flipT = !flipT;      updRotLbl(); buildTools(); render(); }
+
+function updateCursor(){
+  if(panMode || spaceDown){ canvas.style.cursor = 'grab'; return; }
+  if(isPaint()){
+    canvas.style.cursor = overlayMode === 'erase' ? 'not-allowed'
+                        : overlayMode === 'paint' ? 'crosshair' : 'default';
+    return;
+  }
+  canvas.style.cursor = removeMode ? 'not-allowed' : 'crosshair';
+}
+function setRemove(v){
+  removeMode = v; $('rmMode').checked = v;
+  $('rmLbl').classList.toggle('on', v);
+  updateCursor(); render();
+}
+function updateOverlayButtons(){
+  const p = $('ovPaintBtn'), e = $('ovEraseBtn');
+  if(p) p.classList.toggle('on', overlayMode === 'paint');
+  if(e) e.classList.toggle('on', overlayMode === 'erase');
+}
+function setOverlayMode(m){
+  overlayMode = m;
+  updateOverlayButtons();
+  updateCursor();
+  render();
+}
+
+$('mirror').addEventListener('change', e => { mirror = e.target.checked; e.target.blur(); });
+$('rmMode').addEventListener('change', e => { setRemove(e.target.checked); e.target.blur(); });
+$('panMode').addEventListener('change', e => { panMode = e.target.checked; updateCursor(); e.target.blur(); });
+$('viewBtn').addEventListener('click', () => { fitView(); render(); });
+$('rotBtn').addEventListener('click', doRot);
+$('flipBtn').addEventListener('click', doFlip);
+$('undoBtn').addEventListener('click', doUndo);
+
+/* paint palette inputs */
+$('colBody').addEventListener('input', e => { PAINT.body = e.target.value; render(); });
+$('colBody2').addEventListener('input', e => { PAINT.body2 = e.target.value; render(); });
+$('colOutline').addEventListener('input', e => { PAINT.outline = e.target.value; render(); });
+$('colWeapon').addEventListener('input', e => { PAINT.weapons = e.target.value; render(); });
+$('colGlass').addEventListener('input', e => { PAINT.glass = e.target.value; render(); });
+$('colEdge').addEventListener('input', e => { PAINT.edge = e.target.value; render(); });
+$('colOverlay').addEventListener('input', e => { PAINT.overlay = e.target.value; render(); });
+
+$('ovPaintBtn').addEventListener('click', () => setOverlayMode(overlayMode === 'paint' ? 'off' : 'paint'));
+$('ovEraseBtn').addEventListener('click', () => setOverlayMode(overlayMode === 'erase' ? 'off' : 'erase'));
+$('ovClearBtn').addEventListener('click', () => {
+  if(!isPaint()) return;
+  pushUndo();
+  floors[cur].overlay = {};
+  render();
+});
+
+$('clearBtn').addEventListener('click', () => {
+  if(isPaint()){ toast('Switch to a build layer to clear'); return; }
+  pushUndo();
+  if(layer === 0){ tiles = []; markDirty(); prune(); }
+  else if(layer === 1) energy = [];
+  else if(layer === 2) weapons = [];
+  else if(layer === 3) modules = [];
+  else { engines = []; utilities = []; }
+  if(isPaint() && !hasCabin()){ setLayer(0); toast('Paint mode needs a cabin'); return; }
+  render(); updateStats(); buildTools();
+});
+
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1700);
+}
+
+/* =========================================================
+   SHIP FILE — server-side signing via /api/export & /api/import
+   The client no longer knows the signing secret. Only ship *data*
+   travels in the request; the server adds the integrity signature.
+   ========================================================= */
+const SHIP_MAGIC = 'SHIPWRIGHT';
+const SHIP_VERSION = 1;
+
+const nameInput = $('shipName');
+function getShipName(){
+  const v = (nameInput.value || '').trim();
+  return v || 'Untitled Ship';
+}
+function setShipName(v){
+  nameInput.value = String(v || 'Untitled Ship').slice(0, 48);
+}
+nameInput.addEventListener('input', () => {
+  document.title = getShipName() + ' — Shipwright';
+});
+
+/* buildShipData produces the raw, unsigned state that the server will sign */
+function buildShipData(){
+  sync();
+  return {
+    magic: SHIP_MAGIC,
+    version: SHIP_VERSION,
+    name: getShipName(),
+    paint: {
+      body:    PAINT.body,
+      body2:   PAINT.body2,
+      outline: PAINT.outline,
+      weapons: PAINT.weapons,
+      glass:   PAINT.glass,
+      edge:    PAINT.edge
+    },
+    overlayColor: PAINT.overlay,
+    floors: floors.map(f => ({
+      W: f.W, H: f.H, CS: f.CS,
+      tiles: f.tiles.map(t => ({
+        kind: t.kind, rot: t.rot|0, flip: !!t.flip, c: t.c|0, r: t.r|0
+      })),
+      overlay: Object.assign({}, f.overlay || {})
+    })),
+    weapons:   weapons.map(w => ({ kind: w.kind, c: w.c|0, r: w.r|0, rot: w.rot|0 })),
+    energy:    energy.map(e => ({ id: e.id, c: e.c|0, r: e.r|0 })),
+    modules:   modules.map(m => ({ kind: m.kind, c: m.c|0, r: m.r|0 })),
+    engines:   engines.map(e => ({ c: e.c|0, r: e.r|0 })),
+    utilities: utilities.map(u => ({ kind: u.kind, c: u.c|0, r: u.r|0, rot: u.rot|0 }))
+  };
+}
+
+/* Client sends raw data → server returns signed .ship file JSON */
+async function exportShip(){
+  const btn = $('exportBtn');
+  if(btn) btn.disabled = true;
+  try {
+    const data = buildShipData();
+    const res = await fetch('/api/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data })
+    });
+    if(!res.ok){
+      let msg = 'server error';
+      try { const j = await res.json(); msg = j.error || msg; } catch(_){}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const safe = getShipName()
+      .replace(/[\\/:*?"<>|\r\n\t]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'ship';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = safe + '.ship';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Exported ' + safe + '.ship');
+  } catch(err){
+    toast('Export failed: ' + err.message);
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* Client sends parsed .ship file → server verifies signature → returns data */
+function importShipFile(file){
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      let parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch(_){ throw new Error('file is not valid JSON'); }
+
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed)
+      });
+      if(!res.ok){
+        let msg = 'import rejected';
+        try { const j = await res.json(); msg = j.error || msg; } catch(_){}
+        throw new Error(msg);
+      }
+      const out = await res.json();
+      if(!out || !out.data) throw new Error('server returned no ship data');
+      applyShipData(out.data);
+      toast('Imported ' + getShipName());
+    } catch(err){
+      toast('Import failed: ' + err.message);
+    }
+  };
+  reader.onerror = () => toast('Import failed: could not read file');
+  reader.readAsText(file);
+}
+
+/* applyShipData stays on the client — this is the state the server has approved */
+function applyShipData(d){
+  if(d.magic !== SHIP_MAGIC || d.version !== SHIP_VERSION)
+    throw new Error('unsupported ship format version');
+
+  if(d.paint && typeof d.paint === 'object'){
+    if(typeof d.paint.body === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.body))    PAINT.body    = d.paint.body;
+    if(typeof d.paint.body2 === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.body2))   PAINT.body2   = d.paint.body2;
+    if(typeof d.paint.outline === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.outline)) PAINT.outline = d.paint.outline;
+    if(typeof d.paint.weapons === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.weapons)) PAINT.weapons = d.paint.weapons;
+    if(typeof d.paint.glass === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.glass))   PAINT.glass   = d.paint.glass;
+    if(typeof d.paint.edge === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.paint.edge))    PAINT.edge    = d.paint.edge;
+  }
+  if(typeof d.overlayColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.overlayColor))
+    PAINT.overlay = d.overlayColor;
+
+  const rawFloors = Array.isArray(d.floors) ? d.floors : [];
+  const newFloors = [];
+  for(const f of rawFloors){
+    if(!f || typeof f !== 'object') continue;
+    const W2 = Math.max(4, Math.min(80, f.W|0 || 25));
+    const H2 = Math.max(4, Math.min(60, f.H|0 || 17));
+    const CS2 = Math.max(6, Math.min(80, Number(f.CS) || 30));
+    const tiles = [];
+    for(const t of (Array.isArray(f.tiles) ? f.tiles : [])){
+      if(!t || !TILES[t.kind]) continue;
+      const rt = (((t.rot|0) % 4) + 4) % 4;
+      const fl = !!t.flip;
+      const b = basePoly(t.kind, rt, fl);
+      const c = t.c|0, r = t.r|0;
+      if(c < 0 || r < 0 || c + b.w > W2 || r + b.h > H2) continue;
+      tiles.push({ kind: t.kind, rot: rt, flip: fl, c, r, w: b.w, h: b.h, p: b.p });
+    }
+    const overlay = {};
+    if(f.overlay && typeof f.overlay === 'object'){
+      for(const k in f.overlay){
+        if(!Object.prototype.hasOwnProperty.call(f.overlay, k)) continue;
+        const val = f.overlay[k];
+        if(typeof val === 'string' && /^#[0-9a-fA-F]{6}$/.test(val) && /^\d+,\d+$/.test(k)) overlay[k] = val;
+      }
+    }
+    newFloors.push({
+      W: W2, H: H2, CS: CS2,
+      tiles, cells: new Array(W2*H2).fill(null), dirty: true,
+      overlay
+    });
+  }
+  if(!newFloors.length) newFloors.push(mkFloor(0), mkFloor(1));
+
+  floors = newFloors;
+  cur = 0;
+  load(0);
+  const W0 = floors[0].W, H0 = floors[0].H;
+
+  uid = 1;
+
+  weapons = [];
+  for(const w of (Array.isArray(d.weapons) ? d.weapons : [])){
+    if(weapons.length >= MAX_WEAPONS) break;
+    const def = WEAPONS.find(x => x.id === w.kind);
+    if(!def) continue;
+    const rotQ = (((w.rot|0) % 4) + 4) % 4;
+    let ww = def.w, hh = def.h;
+    if(rotQ % 2 === 1){ const t = ww; ww = hh; hh = t; }
+    const c = w.c|0, r = w.r|0;
+    if(c < 0 || r < 0 || c + ww > W0 || r + hh > H0) continue;
+    weapons.push({ uid: uid++, kind: def.id, c, r, w: ww, h: hh, rot: rotQ });
+  }
+
+  energy = [];
+  for(const e of (Array.isArray(d.energy) ? d.energy : [])){
+    const def = EN_BY_ID[e.id];
+    if(!def) continue;
+    const s = def.size;
+    const c = e.c|0, r = e.r|0;
+    if(c < 0 || r < 0 || c + s > W0 || r + s > H0) continue;
+    energy.push({ uid: uid++, id: def.id, c, r, s });
+  }
+
+  modules = [];
+  for(const m of (Array.isArray(d.modules) ? d.modules : [])){
+    if(modules.length >= MAX_MODULES) break;
+    if(!MODULES.find(x => x.id === m.kind)) continue;
+    const c = m.c|0, r = m.r|0;
+    if(c < 0 || r < 0 || c + MODULE_SIZE > W0 || r + MODULE_SIZE > H0) continue;
+    modules.push({ uid: uid++, kind: m.kind, c, r });
+  }
+
+  engines = [];
+  for(const e of (Array.isArray(d.engines) ? d.engines : [])){
+    const c = e.c|0, r = e.r|0;
+    if(c < 0 || r < 0 || c >= W0 || r >= H0) continue;
+    engines.push({ uid: uid++, c, r, s: 1 });
+  }
+
+  utilities = [];
+  for(const u of (Array.isArray(d.utilities) ? d.utilities : [])){
+    const def = UTILITIES.find(x => x.id === u.kind);
+    if(!def) continue;
+    const rotQ = (((u.rot|0) % 4) + 4) % 4;
+    const ww = rotQ % 2 ? def.h : def.w, hh = rotQ % 2 ? def.w : def.h;
+    const c = u.c|0, r = u.r|0;
+    if(c < 0 || r < 0 || c + ww > W0 || r + hh > H0) continue;
+    utilities.push({ uid: uid++, kind: def.id, c, r, rot: rotQ });
+  }
+
+  setShipName(d.name || 'Untitled Ship');
+  document.title = getShipName() + ' — Shipwright';
+
+  $('colBody').value    = PAINT.body;
+  $('colBody2').value   = PAINT.body2;
+  $('colOutline').value = PAINT.outline;
+  $('colWeapon').value  = PAINT.weapons;
+  $('colGlass').value   = PAINT.glass;
+  $('colEdge').value    = PAINT.edge;
+  $('colOverlay').value = PAINT.overlay;
+
+  layer = 0; overlayMode = 'off';
+  document.querySelectorAll('.layerbtn').forEach(x => x.classList.toggle('active', +x.dataset.layer === 0));
+  $('paintPanel').style.display = 'none';
+  updateOverlayButtons();
+  updateCursor();
+
+  setFloor(0);
+  markDirty();
+  ensureCells();
+
+  buildFloors();
+  buildTools();
+  updateStats();
+  fitView();
+  render();
+}
+
+$('exportBtn').addEventListener('click', exportShip);
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) importShipFile(f);
+  e.target.value = '';
+});
+
+/* =========================================================
+   POINTER INPUT
+   ========================================================= */
+const ptrs = new Map();
+let gest = null, gestured = false, panning = false, panLast = null, pending = null;
+let panMode = false, spaceDown = false;
+
+function gInfo(){
+  const [a, b] = [...ptrs.values()].map(lg);
+  return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x)/2, y: (a.y + b.y)/2 };
+}
+function zoomAt(x, y, nz){
+  nz = Math.max(0.3, Math.min(5, nz));
+  const wx = (x - cam.x)/cam.z, wy = (y - cam.y)/cam.z;
+  cam.z = nz; cam.x = x - wx*nz; cam.y = y - wy*nz;
+}
+function cancelStroke(){
+  if(drawing && strokeUndoPushed && undoStack.length){ restore(undoStack.pop()); updateStats(); buildFloors(); }
+  drawing = false; drawingErase = false; lastCell = null;
+  strokeUndoPushed = false; pending = null; panning = false;
+}
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const q = lg(e);
+  zoomAt(q.x, q.y, cam.z*Math.exp(-e.deltaY*0.0015));
+  render();
+}, {passive:false});
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);
+  if(ptrs.size === 0) gestured = false;
+  ptrs.set(e.pointerId, {clientX:e.clientX, clientY:e.clientY});
+
+  if(ptrs.size === 2){ cancelStroke(); gestured = true; gest = gInfo(); render(); return; }
+  if(ptrs.size > 2) return;
+
+  if(panMode || e.button === 1 || spaceDown){
+    panning = true; panLast = lg(e); canvas.style.cursor = 'grabbing'; return;
+  }
+
+  const p = localPos(e), {c, r} = cellAt(p.x, p.y);
+  hover.c = c; hover.r = r;
+  strokeUndoPushed = false;
+
+  if(isPaint()){
+    if(overlayMode !== 'off'){
+      drawing = true;
+      drawingErase = overlayMode === 'erase' || e.button === 2;
+      lastCell = {c, r};
+      paintOverlayCell(c, r, drawingErase);
+      render();
+    }
+    return;
+  }
+
+  if(layer === 0 || (layer === 4 && selUtility === 'engine')){
+    drawing = true;
+    drawingErase = removeMode || e.button === 2;
+    lastCell = {c, r};
+    paint(c, r);
+    return;
+  }
+  if(e.pointerType !== 'mouse'){
+    pending = {c, r, btn:e.button, x:e.clientX, y:e.clientY};
+    render();
+    return;
+  }
+  act(c, r, e.button);
+});
+
+canvas.addEventListener('pointermove', e => {
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {clientX:e.clientX, clientY:e.clientY});
+
+  if(gest && ptrs.size >= 2){
+    const g = gInfo();
+    cam.x += g.x - gest.x; cam.y += g.y - gest.y;
+    zoomAt(g.x, g.y, cam.z*g.d/gest.d);
+    gest = g; render(); return;
+  }
+  if(gestured) return;
+  if(panning){
+    const q = lg(e);
+    cam.x += q.x - panLast.x; cam.y += q.y - panLast.y; panLast = q;
+    render(); return;
+  }
+  if(pending && Math.hypot(e.clientX - pending.x, e.clientY - pending.y) > 8) pending = null;
+
+  const p = localPos(e), {c, r} = cellAt(p.x, p.y);
+  hover.c = c; hover.r = r;
+
+  if(drawing && lastCell && (c !== lastCell.c || r !== lastCell.r)){
+    const steps = Math.max(Math.abs(c - lastCell.c), Math.abs(r - lastCell.r));
+    const sc = lastCell.c, sr = lastCell.r;
+    for(let k = 1; k <= steps; k++){
+      const x = Math.round(sc + (c - sc)*k/steps);
+      const y = Math.round(sr + (r - sr)*k/steps);
+      if(isPaint()) paintOverlayCell(x, y, drawingErase);
+      else paint(x, y);
+    }
+    lastCell = {c, r};
+    if(isPaint()) render();
+    return;
+  }
+  render();
+});
+
+function pointerEnd(e){
+  ptrs.delete(e.pointerId);
+  if(ptrs.size < 2) gest = null;
+  if(pending && e.type === 'pointerup' && !gestured && ptrs.size === 0){
+    const q = pending; pending = null;
+    act(q.c, q.r, q.btn);
+  }
+  if(ptrs.size === 0){ pending = null; if(panning){ panning = false; updateCursor(); } }
+  drawing = false; drawingErase = false; lastCell = null; strokeUndoPushed = false;
+  updateStats(); render();
+}
+canvas.addEventListener('pointerup', pointerEnd);
+canvas.addEventListener('pointercancel', pointerEnd);
+canvas.addEventListener('pointerleave', () => { hover.c = -1; hover.r = -1; render(); });
+
+/* =========================================================
+   KEYBOARD
+   ========================================================= */
+window.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'color') return;
+  const k = e.key;
+  if(k === ' '){ e.preventDefault(); if(!spaceDown){ spaceDown = true; updateCursor(); render(); } }
+  else if(k >= '1' && k <= '6') setLayer(+k - 1);
+  else if(k === '[') switchFloor(cur - 1);
+  else if(k === ']') switchFloor(cur + 1);
+  else if(k === '0'){ fitView(); render(); }
+  else if(k === 'r' || k === 'R') doRot();
+  else if(k === 'f' || k === 'F') doFlip();
+  else if(k === 'x' || k === 'X') setRemove(!removeMode);
+  else if(k === 'm' || k === 'M'){ mirror = !mirror; $('mirror').checked = mirror; }
+  else if((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')){ e.preventDefault(); doUndo(); }
+});
+window.addEventListener('keyup', e => {
+  if(e.key === ' '){ e.preventDefault(); spaceDown = false; updateCursor(); render(); }
+});
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+floors = [mkFloor(0), mkFloor(1)];
+load(0);
+fitView();
+markDirty();
+buildFloors();
+buildTools();
+updateStats();
+updateOverlayButtons();
+document.title = getShipName() + ' — Shipwright';
+render();
+
+})();
+</script>
+</body>
+</html>
